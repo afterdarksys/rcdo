@@ -1,0 +1,44 @@
+name: Verify toolkit
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Run race-enabled tests
+        run: go test -race ./...
+
+      - name: Run static analysis
+        run: go vet ./...
+
+      - name: Build toolkit
+        run: make build
+
+      - name: Check accessible help output
+        shell: bash
+        run: |
+          set -euo pipefail
+          for tool in dist/*; do
+            if [[ ! -x "$tool" ]]; then
+              continue
+            fi
+            "$tool" --help 2>&1 |
+              ./dist/a11y-output-check --max-line 100 >/dev/null
+          done

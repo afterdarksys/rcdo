@@ -1,0 +1,225 @@
+# Git Tools: Accessible Infrastructure Change Review
+
+This project is an early-stage toolkit for reviewing infrastructure changes before they cause outages.
+
+It is being designed by a visually impaired operator who is 90% blind and works with GitHub Actions, Spacelift, OpenTofu, Ansible, AWS, Alicloud, and a custom deployment kit. The goal is to make risky changes easier to understand with a screen reader, easier to verify, and harder to approve by accident.
+
+The intended community includes blind and low-vision DevOps engineers using screen readers or large print in boutique finance companies, smaller banks, technology companies, consultancies, and small businesses. These teams may have no prior experience supporting a blind infrastructure operator and may not own expensive enterprise tooling. The toolkit is therefore offline-first, low-dependency, auditable, and usable with ordinary pipes and files.
+
+> Status: work-ready beta core. Every documented command builds and runs, with live read-only collectors for installed CLIs. Each employer must validate its credentials, schemas, policies, and deployment-kit adapter before production use. The checks are conservative guardrails, not proof that a deployment is safe.
+
+## Current foundation
+
+The Go package in `finding/` gives every future checker one output contract:
+
+- Validated findings with stable IDs, severity, resource, action, environment, evidence, confidence, and remediation.
+- Overall `CLEAN`, `REVIEW`, `BLOCKED`, or `INCOMPLETE` status.
+- Severity-first plain-text output with explicit labels and no dependence on color or visual tables.
+- Versioned JSON output for CI annotations, audit records, and integrations.
+- Fail-closed rendering: invalid findings are returned as errors instead of being presented as a completed review.
+
+Run the test suite with:
+
+```sh
+go test ./...
+```
+
+Build the toolkit with:
+
+```sh
+make build
+```
+
+This creates `dist/git-tools`, `dist/git-diff-walker`, and named command aliases. Use either style:
+
+```sh
+./dist/git-tools tofu-check --input plan.json
+./dist/tofu-check --input plan.json
+```
+
+Install for one user without administrator access:
+
+```sh
+make install PREFIX="$HOME/.local"
+```
+
+## Goals
+
+- Summarize the operational effect of a change before showing the raw diff.
+- Identify destructive, high-blast-radius, or difficult-to-reverse changes.
+- Correlate source changes with GitHub Actions jobs, Spacelift runs, and deployment targets.
+- Check OpenTofu/Terraform, Ansible, workflow YAML, and shell commands for common hazards.
+- Produce concise text, structured JSON, and CI annotations from the same findings.
+- Make every result usable without color, mouse input, charts, or visual layout.
+- Keep a human in control: explain evidence and uncertainty instead of silently changing infrastructure.
+
+## Accessibility principles
+
+- Plain text is the primary interface; color is optional and never the only signal.
+- Findings begin with severity, resource, action, environment, and reason.
+- Stable finding IDs make it possible to resume a review and skip already-reviewed items.
+- Summaries are short and hierarchical so screen-reader users can navigate from risk to evidence.
+- Output supports `--no-color`, `--format text`, `--format json`, and adjustable verbosity.
+- Tables have a linear text alternative, and interactive prompts have non-interactive equivalents.
+- Exit codes distinguish clean, warning, blocked, invalid-input, and tool-failure states.
+
+## Toolkit commands
+
+### `pr-manager` (MVP available)
+
+Create, inspect, and update pull requests. `inspect` reviews GitHub JSON for stale commits, conflicts, approvals, and failed checks. `create` and `update` produce a readable preview and invoke GitHub CLI only when `--execute` is explicitly supplied.
+
+### `git-diff-walker` (MVP available)
+
+Walk a diff one logical change at a time. Provide screen-reader-friendly summaries, optional color, search, file and hunk navigation, and a way to mark findings as reviewed.
+
+The current MVP reads a unified Git diff without invoking Git or changing the repository. It supports linear text, structured JSON, summary-only output, case-insensitive search of changed lines, and one-based file and hunk selection.
+
+```sh
+# Review a working-tree diff.
+git diff | ./dist/git-diff-walker
+
+# Hear the summary before choosing a file or hunk.
+git diff | ./dist/git-diff-walker --summary-only
+git diff | ./dist/git-diff-walker --file 2 --hunk 1
+
+# Find changed lines concerning production.
+git diff | ./dist/git-diff-walker --search production
+
+# Save structured output for another tool.
+git diff | ./dist/git-diff-walker --format json > diff-review.json
+
+# Review an existing patch without touching a repository.
+./dist/git-diff-walker --input proposed-change.diff
+```
+
+Run `./dist/git-diff-walker --help` for every option. Optional color and persistent reviewed-item tracking remain planned features; neither is required for nonvisual use.
+
+### `git-danger-check` (MVP available)
+
+Detect dangerous operations involving tools such as `aws`, `aliyun`, `gcloud`, `oci`, `docker`, and `kubectl`. Flag destructive commands, wildcard targets, production access, privilege changes, unpinned artifacts, unsafe shell expansion, and missing confirmation or rollback controls.
+
+### `git-isimportant-check` (MVP available)
+
+Use a configuration file such as `giimp_check.conf` to identify important files, resources, and lines. Warn about deletion of critical configuration, unusually large changes, broken protections, and changes that require specific reviewers.
+
+### `git-update-json` (MVP available)
+
+Safely deep-merge OpenTofu/Terraform JSON at an explicit path using a supplied JSON object. Validate and print the complete proposed document, preserve unrelated object keys, and require `--write` before atomically replacing a file.
+
+Example use case: add or update an AWS VM configuration from `template.json`.
+
+### `gha-tool` (MVP available)
+
+Review and maintain GitHub Actions workflows:
+
+- `check`: scan permissions, expressions, action references, runner trust, and secret-handling hazards.
+- `update --template <file.yml>`: preview an approved workflow template and replace the named workflow only with `--write`.
+- `fix`: normalize safe textual formatting and report dangerous patterns that still require a human decision.
+- `fmt`: normalize line endings and trailing whitespace without changing workflow structure.
+- `dangerous`: find overbroad permissions, unpinned actions, secret exposure, unsafe pull-request triggers, script injection, and risky deployment steps.
+
+Update and formatting operations preview to standard output. A file changes only when `--write` is supplied.
+
+### `tofu-check` (MVP available)
+
+Review `tofu show -json` plan output. Detect deletes, replacements, stateful-resource impact, IAM/policy updates, and common public-access indicators. Deeper provider, backend, encryption, and organization-specific policies remain policy-pack work.
+
+### `spacelift-check` (MVP available)
+
+Inspect a Spacelift JSON run snapshot for stack, commit, state, and failing policy outcomes. Compare explicit expected stack and commit values so a stale or misdirected plan is obvious. Live collection, dependency, approval, and drift adapters remain future integration work.
+
+### `ansible-check` (MVP available)
+
+Perform conservative text checks for broad host patterns, shell usage, ignored failures, possible plaintext credentials, uncontrolled package upgrades, and always-changed tasks. Use it alongside `ansible-lint`, syntax checks, check mode, and integration tests—not as a replacement for them.
+
+### `deploy-review` (MVP available)
+
+Combine finding reports from the pull request, GitHub Actions, OpenTofu, Spacelift, Ansible, cloud context, and custom deployment-kit adapters. Missing or invalid component reports make the combined review explicitly `INCOMPLETE`.
+
+### `cloud-context-check` (MVP available)
+
+Compare an AWS or Alicloud identity snapshot with an explicitly expected cloud, account, and region. A mismatch is critical. A missing field makes the review incomplete. This is intended to stop correct changes from reaching the wrong account.
+
+### `runbook-check` (MVP available)
+
+Check deployment instructions for rollback, validation, ownership, target scope, and stop conditions. Output uses explicit labels instead of assuming a reader can interpret a visual flowchart.
+
+### `review-brief` (MVP available)
+
+Turn a finding JSON report into a low-density brief with configurable line width. It presents only result, severity, title, target, and next action, making it suitable for large print, high magnification, speech, or a stressful incident bridge.
+
+### `a11y-output-check` (MVP available)
+
+Test CLI output for ANSI control sequences, tab-based alignment, and lines that exceed a configurable magnified-reading width. This lets contributors catch accessibility regressions in CI.
+
+### `evidence-pack` (MVP available)
+
+Create a deterministic JSON manifest containing the reviewed commit, change ID, artifact names, sizes, and SHA-256 hashes. It supports audit and handoff workflows without copying the contents of proprietary plans into the manifest.
+
+## Exit codes
+
+Review commands use stable exit codes suitable for CI and speech-friendly shell wrappers:
+
+- `0`: clean or successful operation
+- `10`: findings require review
+- `20`: high or critical findings block the change
+- `30`: review is incomplete
+- `2`: invalid arguments or input
+
+The full normalized input contracts and pipeline examples are in `docs/input-formats.md`.
+
+Every review command also supports:
+
+- `--format github` for escaped GitHub Actions annotations.
+- `--format sarif` for SARIF 2.1.0 output.
+- `--policy FILE` for owner-attributed, expiring suppressions.
+- Completed-check and incomplete-check coverage in text and JSON reports.
+
+Live collectors are opt-in. See `docs/workflows.md` for GitHub CLI, OpenTofu, Spacelift, AWS, Alicloud, native syntax-checker, policy, and CI examples.
+
+## Suggested review flow
+
+1. Confirm the commit, branch, target account, region, and environment.
+2. Summarize changed files and rank them by operational risk.
+3. Validate GitHub Actions, OpenTofu/Terraform, Ansible, and deployment-kit inputs.
+4. Compare configuration changes with the actual Spacelift plan.
+5. Present destructive actions and security-boundary changes first.
+6. Require an explicit acknowledgement for blocking findings or documented exceptions.
+7. Save a machine-readable review record for CI, audit, and later comparison.
+
+## High-value safety checks
+
+- Resource deletion or replacement, especially stateful services.
+- IAM privilege expansion, trust-policy changes, and new public access.
+- Security-group, firewall, route, DNS, load-balancer, and certificate changes.
+- State backend, provider, account, subscription, region, or workspace changes.
+- Secrets printed to logs or passed through unsafe shell interpolation.
+- GitHub Actions with broad `GITHUB_TOKEN` permissions or mutable third-party action tags.
+- Ansible plays targeting more hosts than expected or using `shell` where a module is safer.
+- Plans generated from a different commit, variable set, stack, or environment.
+- Missing health checks, rollout limits, validation steps, backups, or rollback instructions.
+- AWS/Alicloud naming or identity mismatches that could send a change to the wrong cloud account.
+
+## Design guardrails
+
+- Start read-only and advisory. Any write or deployment action must be explicit and previewable.
+- Parse structured output where available instead of scraping colored terminal text.
+- Never treat a successful syntax check as proof that a change is safe.
+- Show the rule, evidence, affected target, confidence, and suggested next check for each finding.
+- Support repository-specific policies and documented suppressions with an owner, reason, and expiry.
+- Redact secrets from output and test fixtures.
+- Degrade clearly when an API, credential, or upstream service is unavailable; do not report a partial review as complete.
+
+## Initial roadmap
+
+1. **Complete:** Shared finding format and accessible text/JSON renderers.
+2. **Complete:** Working MVPs for every command in the toolkit.
+3. **Complete:** OpenTofu plan JSON, GitHub pull-request snapshot, Spacelift snapshot, and cloud-context inspection.
+4. **Next:** Organization-specific AWS and Alicloud policy packs plus custom deployment-kit adapters.
+5. **Next:** Live read-only API collection with provenance and coverage reporting.
+6. **Next:** CI annotations, persistent review history, expiring suppressions, signed evidence, and regression fixtures based on anonymized incidents.
+
+## Contributing ideas
+
+Useful contributions include anonymized incident patterns, dangerous-change rules, accessible CLI testing, fixture repositories, cloud-specific policy checks, and adapters that do not expose credentials or proprietary deployment details.

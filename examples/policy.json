@@ -1,0 +1,11 @@
+{
+  "suppressions": [
+    {
+      "id_prefix": "MUTABLE",
+      "resource": ".github/workflows/internal.yml",
+      "owner": "platform-team",
+      "reason": "Internal action mirror is protected and reviewed separately",
+      "expires": "2026-12-31"
+    }
+  ]
+}
