@@ -1,6 +1,7 @@
 package finding
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,8 @@ func RenderText(w io.Writer, report Report) error {
 	if err := report.Validate(); err != nil {
 		return fmt.Errorf("invalid report: %w", err)
 	}
+	wrapped := &textWrapWriter{destination: w, width: 100}
+	w = wrapped
 
 	summary := report.Summary()
 	if _, err := fmt.Fprintf(w,
@@ -79,6 +82,76 @@ func RenderText(w io.Writer, report Report) error {
 		); err != nil {
 			return err
 		}
+	}
+	return wrapped.Flush()
+}
+
+type textWrapWriter struct {
+	destination io.Writer
+	width       int
+	pending     bytes.Buffer
+}
+
+func (w *textWrapWriter) Write(data []byte) (int, error) {
+	w.pending.Write(data)
+	for {
+		value := w.pending.String()
+		newline := strings.IndexByte(value, '\n')
+		if newline < 0 {
+			break
+		}
+		if err := writeTextLine(w.destination, value[:newline], w.width); err != nil {
+			return 0, err
+		}
+		remaining := append([]byte(nil), w.pending.Bytes()[newline+1:]...)
+		w.pending.Reset()
+		w.pending.Write(remaining)
+	}
+	return len(data), nil
+}
+
+func (w *textWrapWriter) Flush() error {
+	if w.pending.Len() == 0 {
+		return nil
+	}
+	value := w.pending.String()
+	w.pending.Reset()
+	return writeTextLine(w.destination, value, w.width)
+}
+
+func writeTextLine(destination io.Writer, line string, width int) error {
+	if len([]rune(line)) <= width {
+		_, err := fmt.Fprintln(destination, line)
+		return err
+	}
+	words := strings.Fields(line)
+	current := ""
+	for _, word := range words {
+		candidate := word
+		if current != "" {
+			candidate = current + " " + word
+		}
+		if len([]rune(candidate)) <= width {
+			current = candidate
+			continue
+		}
+		if current != "" {
+			if _, err := fmt.Fprintln(destination, current); err != nil {
+				return err
+			}
+		}
+		runes := []rune(word)
+		for len(runes) > width {
+			if _, err := fmt.Fprintln(destination, string(runes[:width])); err != nil {
+				return err
+			}
+			runes = runes[width:]
+		}
+		current = string(runes)
+	}
+	if current != "" {
+		_, err := fmt.Fprintln(destination, current)
+		return err
 	}
 	return nil
 }
@@ -198,7 +271,7 @@ func RenderSARIF(w io.Writer, report Report) error {
 		"version": "2.1.0",
 		"$schema": "https://json.schemastore.org/sarif-2.1.0.json",
 		"runs": []any{map[string]any{
-			"tool":    map[string]any{"driver": map[string]any{"name": "git-tools", "version": SchemaVersion}},
+			"tool":    map[string]any{"driver": map[string]any{"name": "rcdo", "version": SchemaVersion}},
 			"results": results,
 		}},
 	}

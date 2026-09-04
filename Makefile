@@ -1,12 +1,11 @@
 .PHONY: build install test vet verify
 
-ALIASES = a11y-output-check ansible-check cloud-context-check deploy-review evidence-pack gha-tool git-danger-check git-isimportant-check git-update-json pr-manager review-brief review-change runbook-check spacelift-check tofu-check
+ALIASES = a11y-output-check ai-assist ansible-check cloud-context-check config-diff config-explain config-remove config-set deploy-review diff-walk error-explain evidence-pack gha-tool git-danger-check git-diff-walker git-isimportant-check git-review git-tools git-update-json ops-policy-check pr-manager repo-policy-check review-brief review-change review-session runbook-check spacelift-check tofu-check
 
 build:
 	mkdir -p dist
-	go build -o dist/git-tools ./cmd/git-tools
-	go build -o dist/git-diff-walker ./cmd/git-diff-walker
-	@for tool in $(ALIASES); do ln -sf git-tools dist/$$tool; done
+	go build -o dist/rcdo ./cmd/rcdo
+	@for tool in $(ALIASES); do ln -sf rcdo dist/$$tool; done
 
 test:
 	go test ./...
@@ -20,6 +19,5 @@ PREFIX ?= /usr/local
 
 install: build
 	install -d $(DESTDIR)$(PREFIX)/bin
-	install -m 0755 dist/git-tools $(DESTDIR)$(PREFIX)/bin/git-tools
-	install -m 0755 dist/git-diff-walker $(DESTDIR)$(PREFIX)/bin/git-diff-walker
-	@for tool in $(ALIASES); do ln -sf git-tools $(DESTDIR)$(PREFIX)/bin/$$tool; done
+	install -m 0755 dist/rcdo $(DESTDIR)$(PREFIX)/bin/rcdo
+	@for tool in $(ALIASES); do ln -sf rcdo $(DESTDIR)$(PREFIX)/bin/$$tool; done

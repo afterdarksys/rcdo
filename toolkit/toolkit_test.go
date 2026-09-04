@@ -15,6 +15,25 @@ func execute(command string, args []string, input string) (int, string, string) 
 	return code, stdout.String(), stderr.String()
 }
 
+func TestRCDOPrimaryCommandAndLegacyName(t *testing.T) {
+	for _, command := range []string{"rcdo", "git-tools"} {
+		code, stdout, stderr := execute(command, []string{"version"}, "")
+		if code != 0 || stderr != "" || strings.TrimSpace(stdout) != "rcdo 1.2.0" {
+			t.Fatalf("%s code=%d stdout=%q stderr=%q", command, code, stdout, stderr)
+		}
+	}
+}
+
+func TestRCDODiffWalkIsIntegrated(t *testing.T) {
+	input := "diff --git a/app.yml b/app.yml\n--- a/app.yml\n+++ b/app.yml\n@@ -1 +1 @@\n-replicas: 2\n+replicas: 3\n"
+	for _, command := range []string{"diff-walk", "git-diff-walker"} {
+		code, stdout, stderr := execute(command, []string{"--summary-only"}, input)
+		if code != 0 || stderr != "" || !strings.Contains(stdout, "DIFF SUMMARY") || !strings.Contains(stdout, "Additions: 1") {
+			t.Fatalf("%s code=%d stdout=%q stderr=%q", command, code, stdout, stderr)
+		}
+	}
+}
+
 func TestRuleBasedChecks(t *testing.T) {
 	tests := []struct {
 		command, input, want string
@@ -186,6 +205,389 @@ func TestJSONUpdatePreviewsDeepMerge(t *testing.T) {
 	code, stdout, stderr := execute("git-update-json", []string{"--patch", patch}, `{"vm":{"name":"web","size":"small"}}`)
 	if code != 0 || stderr != "" || !strings.Contains(stdout, `"name": "web"`) || !strings.Contains(stdout, `"size": "large"`) {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigExplainReadsStructuredFormats(t *testing.T) {
+	tests := []struct {
+		name, syntax, input, wantPath, wantValue string
+	}{
+		{"json", "json", `{"service":{"ports":[80,443]}}`, "$.service.ports[1]", "443"},
+		{"yaml", "yaml", "service:\n  enabled: true\n", "$.service.enabled", "true"},
+		{"toml", "toml", "[service]\nname = \"api\"\n", "$.service.name", `"api"`},
+		{"hcl", "hcl", "resource \"aws_instance\" \"web\" {\n  instance_type = \"t3.micro\"\n}\n", "$.resource.aws_instance.web.instance_type", `"t3.micro"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			code, stdout, stderr := execute("config-explain", []string{"--syntax", tt.syntax}, tt.input)
+			if code != 0 || !strings.Contains(stdout, "Path: "+tt.wantPath) || !strings.Contains(stdout, "Value: "+tt.wantValue) || stderr != "" {
+				t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+			}
+		})
+	}
+}
+
+func TestConfigExplainRedactsAndFilters(t *testing.T) {
+	input := `{"database":{"host":"db.internal","password":"do-not-print"},"region":"us-east-1"}`
+	code, stdout, stderr := execute("config-explain", []string{"--path", "database", "--format", "json"}, input)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `"path": "$.database.host"`) ||
+		!strings.Contains(stdout, `"value": "[REDACTED]"`) || strings.Contains(stdout, "do-not-print") || strings.Contains(stdout, "us-east-1") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, stdout, stderr = execute("config-explain", []string{"--show-secrets", "--path", "database.password"}, input)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `Value: "do-not-print"`) {
+		t.Fatalf("show secrets code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigExplainAutoDetectsFileExtension(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "inventory.yaml")
+	if err := os.WriteFile(path, []byte("hosts:\n  - web-1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-explain", []string{"--input", path}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Format: yaml") || !strings.Contains(stdout, "Path: $.hosts[0]") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigExplainRecognizesTerraformVariablesAsHCL(t *testing.T) {
+	directory := t.TempDir()
+	path := filepath.Join(directory, "production.tfvars")
+	if err := os.WriteFile(path, []byte("instance_type = \"t3.micro\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-explain", []string{"--input", path}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Format: hcl") || !strings.Contains(stdout, "Path: $.instance_type") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigExplainHonorsTextWidthForLongPaths(t *testing.T) {
+	input := `{"this_is_a_very_long_configuration_key_that_exceeds_width":{"another_really_long_nested_configuration_key":true}}`
+	code, stdout, stderr := execute("config-explain", []string{"--width", "40"}, input)
+	if code != 0 || stderr != "" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	for lineNumber, line := range strings.Split(stdout, "\n") {
+		if len([]rune(line)) > 40 {
+			t.Fatalf("line %d exceeds width: %q", lineNumber+1, line)
+		}
+	}
+}
+
+func TestConfigDiffReportsSemanticChangesWithoutContainerNoise(t *testing.T) {
+	directory := t.TempDir()
+	before := filepath.Join(directory, "before.json")
+	after := filepath.Join(directory, "after.json")
+	if err := os.WriteFile(before, []byte(`{"service":{"image":"api:v1","replicas":2},"obsolete":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(after, []byte(`{"service":{"image":"api:v2","replicas":2,"port":8080}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-diff", []string{"--before", before, "--after", after, "--check"}, "")
+	if code != 10 || stderr != "" || !strings.Contains(stdout, "Path: $.service.image") ||
+		!strings.Contains(stdout, "Before value: \"api:v1\"") || !strings.Contains(stdout, "After value: \"api:v2\"") ||
+		!strings.Contains(stdout, "Path: $.service.port") || !strings.Contains(stdout, "Path: $.obsolete") ||
+		strings.Contains(stdout, "Path: $.service\n") || !strings.Contains(stdout, "Changes: 3") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigDiffDetectsButRedactsSecretChanges(t *testing.T) {
+	directory := t.TempDir()
+	before := filepath.Join(directory, "before.yaml")
+	after := filepath.Join(directory, "after.yaml")
+	if err := os.WriteFile(before, []byte("database:\n  password: old-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(after, []byte("database:\n  password: new-secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-diff", []string{"--before", before, "--after", after, "--format", "json"}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `"changed": true`) ||
+		!strings.Contains(stdout, `"path": "$.database.password"`) || strings.Count(stdout, "[REDACTED]") != 2 ||
+		strings.Contains(stdout, "old-secret") || strings.Contains(stdout, "new-secret") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigDiffComparesEquivalentJSONAndYAML(t *testing.T) {
+	directory := t.TempDir()
+	before := filepath.Join(directory, "before.json")
+	after := filepath.Join(directory, "after.yaml")
+	if err := os.WriteFile(before, []byte(`{"enabled":true,"ports":[80,443]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(after, []byte("ports:\n  - 80\n  - 443\nenabled: true\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-diff", []string{"--before", before, "--after", after, "--check"}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Result: UNCHANGED") || !strings.Contains(stdout, "Changes: 0") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigDiffPathFilterCanSelectUnchangedSubtree(t *testing.T) {
+	directory := t.TempDir()
+	before := filepath.Join(directory, "before.toml")
+	after := filepath.Join(directory, "after.toml")
+	if err := os.WriteFile(before, []byte("[service]\nname = \"api\"\nport = 80\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(after, []byte("[service]\nname = \"api\"\nport = 443\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-diff", []string{"--before", before, "--after", after, "--path", "service.name", "--check"}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Result: UNCHANGED") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigDiffOrdersArrayIndexesNumerically(t *testing.T) {
+	directory := t.TempDir()
+	before := filepath.Join(directory, "before.json")
+	after := filepath.Join(directory, "after.json")
+	if err := os.WriteFile(before, []byte(`{"items":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(after, []byte(`{"items":[0,1,2,3,4,5,6,7,8,9,10]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-diff", []string{"--before", before, "--after", after}, "")
+	if code != 0 || stderr != "" || strings.Index(stdout, "Path: $.items[2]") > strings.Index(stdout, "Path: $.items[10]") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigSetPreviewsThenWritesAtomically(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"service":{"replicas":2,"password":"old"}}`), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-set", []string{"--input", path, "--path", "service.replicas", "--value", "4"}, "")
+	current, _ := os.ReadFile(path)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Before value: 2") || !strings.Contains(stdout, "After value: 4") || !strings.Contains(stdout, "File written: no") || !strings.Contains(string(current), `"replicas":2`) {
+		t.Fatalf("preview code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)
+	}
+	code, stdout, stderr = execute("config-set", []string{"--input", path, "--path", "service.password", "--value", "new", "--string", "--write"}, "")
+	current, _ = os.ReadFile(path)
+	info, _ := os.Stat(path)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "UPDATED:") || strings.Contains(stdout, "new") || !strings.Contains(string(current), `"new"`) || info.Mode().Perm() != 0o640 {
+		t.Fatalf("write code=%d stdout=%q current=%q mode=%o stderr=%q", code, stdout, current, info.Mode().Perm(), stderr)
+	}
+}
+
+func TestConfigRemoveSupportsArrays(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte("ports:\n  - 80\n  - 443\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("config-remove", []string{"--input", path, "--path", "ports[0]"}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Action: CHANGED") || !strings.Contains(stdout, "Before value: 80") || !strings.Contains(stdout, "After value: 443") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestConfigSetMutatesHCLAttributeWithPreview(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "main.tf")
+	input := "resource \"aws_instance\" \"web\" {\n  instance_type = \"t3.micro\"\n}\n"
+	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"--input", path, "--path", "resource.aws_instance.web.instance_type", "--value", "t3.large", "--string"}
+	code, stdout, stderr := execute("config-set", args, "")
+	current, _ := os.ReadFile(path)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, `Before value: "t3.micro"`) || !strings.Contains(stdout, `After value: "t3.large"`) || string(current) != input {
+		t.Fatalf("preview code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)
+	}
+	code, stdout, stderr = execute("config-set", append(args, "--write"), "")
+	current, _ = os.ReadFile(path)
+	if code != 0 || stderr != "" || !strings.Contains(string(current), `instance_type = "t3.large"`) {
+		t.Fatalf("write code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)
+	}
+}
+
+func TestErrorExplainClassifiesAndRedacts(t *testing.T) {
+	input := "Error: AccessDenied: not authorized to perform action token=\"abc 123\" Authorization: Bearer eyJ.secret\nrequest failed\n"
+	code, stdout, stderr := execute("error-explain", nil, input)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Summary: Permission denied") || !strings.Contains(stdout, "token=[REDACTED]") || strings.Contains(stdout, "abc 123") || strings.Contains(stdout, "eyJ.secret") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestOperationalPolicyBlocksPublicAccess(t *testing.T) {
+	code, stdout, stderr := execute("ops-policy-check", []string{"--environment", "production"}, `{"ingress_cidr":"0.0.0.0/0"}`)
+	if code != 20 || stderr != "" || !strings.Contains(stdout, "Public network access configured") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestRepositoryPolicyChecksCriticalAndCompanionPaths(t *testing.T) {
+	directory := t.TempDir()
+	policy := filepath.Join(directory, "policy.yaml")
+	policyData := "version: \"1\"\ncritical_paths:\n  - pattern: infra/**\n    owner: platform\n    severity: high\n    reason: production infrastructure\nrequired_companions:\n  - when: infra/**\n    require: [runbooks/**]\n    reason: infrastructure changes need rollback instructions\n"
+	if err := os.WriteFile(policy, []byte(policyData), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("repo-policy-check", []string{"--repo-policy", policy}, "M\tinfra/main.tf\n")
+	if code != 20 || stderr != "" || !strings.Contains(stdout, "Repository critical path changed") || !strings.Contains(stdout, "Required companion change is missing") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestUnifiedReviewUsesReadOnlyGitAndPolicyChecks(t *testing.T) {
+	original := executeReadOnly
+	defer func() { executeReadOnly = original }()
+	executeReadOnly = func(name string, args ...string) commandResult {
+		joined := strings.Join(args, " ")
+		switch {
+		case name == "git" && strings.Contains(joined, "--name-status"):
+			return commandResult{stdout: []byte("M\tinfra/main.tf\n")}
+		case name == "git" && args[0] == "diff":
+			return commandResult{stdout: []byte("+ cidr = \"0.0.0.0/0\"\n")}
+		case name == "git" && args[0] == "show" && strings.Contains(args[1], "base:"):
+			return commandResult{stdout: []byte("cidr = \"10.0.0.0/8\"\n")}
+		case name == "git" && args[0] == "show":
+			return commandResult{stdout: []byte("cidr = \"0.0.0.0/0\"\n")}
+		default:
+			return commandResult{err: os.ErrNotExist}
+		}
+	}
+	code, stdout, stderr := execute("review", []string{"--base", "base", "--head", "head", "--repo-policy", ""}, "")
+	if code != 20 || stderr != "" || !strings.Contains(stdout, "Structured configuration changed") || !strings.Contains(stdout, "Public network access configured") {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestReviewSessionCanResumeAndAcknowledge(t *testing.T) {
+	directory := t.TempDir()
+	reportPath := filepath.Join(directory, "report.json")
+	sessionPath := filepath.Join(directory, "session.json")
+	report := `{"findings":[{"id":"RISK-1","severity":"high","title":"Risk","resource":"prod","action":"review","environment":"production","reason":"danger","evidence":["x"],"confidence":"high","remediation":"stop"}]}`
+	if err := os.WriteFile(reportPath, []byte(report), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("review-session", []string{"start", "--report", reportPath, "--session", sessionPath, "--change-id", "PR-1", "--commit", "abc"}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "REVIEW SESSION STARTED") {
+		t.Fatalf("start code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, stdout, stderr = execute("review-session", []string{"next", "--session", sessionPath}, "")
+	if code != 0 || !strings.Contains(stdout, "ID: RISK-1") {
+		t.Fatalf("next code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, stdout, stderr = execute("review-session", []string{"ack", "--session", sessionPath, "--id", "RISK-1", "--note", "reviewed with platform"}, "")
+	if code != 0 || !strings.Contains(stdout, "ACKNOWLEDGED") {
+		t.Fatalf("ack code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, stdout, stderr = execute("review-session", []string{"next", "--session", sessionPath}, "")
+	if code != 0 || !strings.Contains(stdout, "REVIEW SESSION COMPLETE") {
+		t.Fatalf("complete code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestAppConfigDefaultsAndCLIOverride(t *testing.T) {
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	code, stdout, stderr := execute("config", []string{"init", "--file", configPath}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "CONFIGURATION CREATED") {
+		t.Fatalf("init code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, _, stderr = execute("config", []string{"set", "--file", configPath, "--key", "commands.config-explain.width", "--value", "40"}, "")
+	if code != 0 || stderr != "" {
+		t.Fatalf("set code=%d stderr=%q", code, stderr)
+	}
+	input := `{"this_is_a_very_long_configuration_key_that_needs_wrapping":true}`
+	code, stdout, stderr = execute("config-explain", []string{"--config-file", configPath}, input)
+	if code != 0 || stderr != "" {
+		t.Fatalf("configured command code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	for _, line := range strings.Split(stdout, "\n") {
+		if len([]rune(line)) > 40 {
+			t.Fatalf("configured width not applied: %q", line)
+		}
+	}
+	code, stdout, stderr = execute("config-explain", []string{"--config-file", configPath, "--width", "80"}, input)
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "this_is_a_very_long_configuration_key_that_needs_wrapping") {
+		t.Fatalf("CLI override code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestCredentialStoreIsPrivateRedactedAndRouted(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "")
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	t.Setenv("OPENROUTER_API_KEY", "")
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	if code, _, stderr := execute("config", []string{"init", "--file", configPath}, ""); code != 0 {
+		t.Fatalf("init code=%d stderr=%q", code, stderr)
+	}
+	secret := "sk-test-do-not-print"
+	code, stdout, stderr := execute("config", []string{"credential-set", "--file", configPath, "--provider", "openai", "--stdin"}, secret+"\n")
+	if code != 0 || stderr != "" || strings.Contains(stdout, secret) || !strings.Contains(stdout, "[REDACTED]") {
+		t.Fatalf("credential set code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	credentialPath := filepath.Join(directory, "credentials.json")
+	info, err := os.Stat(credentialPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("credential mode=%04o", info.Mode().Perm())
+	}
+	data, _ := os.ReadFile(credentialPath)
+	if !strings.Contains(string(data), secret) {
+		t.Fatal("credential was not stored")
+	}
+	code, stdout, stderr = execute("config", []string{"ai-status", "--file", configPath}, "")
+	if code != 0 || stderr != "" || strings.Contains(stdout, secret) || !strings.Contains(stdout, "Slot: primary\nProvider: openai\nAvailable: yes\nCredential source: credential store") {
+		t.Fatalf("status code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, _, stderr = execute("config", []string{"ai-order", "--file", configPath, "--primary", "anthropic", "--backup", "openrouter", "--tertiary", "openai"}, "")
+	if code != 0 || stderr != "" {
+		t.Fatalf("order code=%d stderr=%q", code, stderr)
+	}
+	code, stdout, stderr = execute("config", []string{"ai-status", "--file", configPath}, "")
+	if code != 0 || !strings.Contains(stdout, "Slot: primary\nProvider: anthropic") || !strings.Contains(stdout, "Slot: tertiary\nProvider: openai\nAvailable: yes") {
+		t.Fatalf("reordered status code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	code, stdout, stderr = execute("config", []string{"ai-resolve", "--file", configPath}, "")
+	if code != 0 || stderr != "" || !strings.Contains(stdout, "Selected slot: tertiary\nProvider: openai") || strings.Contains(stdout, secret) {
+		t.Fatalf("resolve code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestAppConfigRejectsAPIKeyInOrdinaryConfig(t *testing.T) {
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	if code, _, stderr := execute("config", []string{"init", "--file", configPath}, ""); code != 0 {
+		t.Fatalf("init code=%d stderr=%q", code, stderr)
+	}
+	code, _, stderr := execute("config", []string{"set", "--file", configPath, "--key", "providers.openai.api_key", "--value", "do-not-store-here"}, "")
+	if code != 2 || !strings.Contains(stderr, "credential-set") {
+		t.Fatalf("code=%d stderr=%q", code, stderr)
+	}
+	data, _ := os.ReadFile(configPath)
+	if strings.Contains(string(data), "do-not-store-here") {
+		t.Fatal("secret leaked into ordinary config")
+	}
+}
+
+func TestCredentialStoreRejectsLoosePermissions(t *testing.T) {
+	directory := t.TempDir()
+	configPath := filepath.Join(directory, "config.yaml")
+	if code, _, stderr := execute("config", []string{"init", "--file", configPath}, ""); code != 0 {
+		t.Fatalf("init code=%d stderr=%q", code, stderr)
+	}
+	credentialPath := filepath.Join(directory, "credentials.json")
+	if err := os.WriteFile(credentialPath, []byte(`{"schema_version":"1","providers":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, _, stderr := execute("config", []string{"ai-status", "--file", configPath}, "")
+	if code != 2 || !strings.Contains(stderr, "require 0600") {
+		t.Fatalf("code=%d stderr=%q", code, stderr)
 	}
 }
 

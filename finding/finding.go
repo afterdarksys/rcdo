@@ -1,4 +1,4 @@
-// Package finding defines the shared result format used by git-tools checks.
+// Package finding defines the shared result format used by RCDO checks.
 package finding
 
 import (

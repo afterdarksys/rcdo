@@ -1,4 +1,4 @@
-# Git Tools: Accessible Infrastructure Change Review
+# RCDO: Ryan Coleman's Accessible DevOps Toolkit
 
 This project is an early-stage toolkit for reviewing infrastructure changes before they cause outages.
 
@@ -30,12 +30,16 @@ Build the toolkit with:
 make build
 ```
 
-This creates `dist/git-tools`, `dist/git-diff-walker`, and named command aliases. Use either style:
+This creates the primary `dist/rcdo` executable and named command aliases. The
+preferred style keeps every workflow under one memorable command:
 
 ```sh
-./dist/git-tools tofu-check --input plan.json
+./dist/rcdo tofu-check --input plan.json
 ./dist/tofu-check --input plan.json
 ```
+
+`git-tools` and `git-diff-walker` remain compatibility aliases for existing
+scripts. New scripts should use `rcdo COMMAND [options]`.
 
 Install for one user without administrator access:
 
@@ -43,9 +47,24 @@ Install for one user without administrator access:
 make install PREFIX="$HOME/.local"
 ```
 
+Create optional user defaults and AI-provider routing:
+
+```sh
+rcdo config init
+rcdo config path
+```
+
+Configuration supports global and per-command defaults with command-line
+options taking precedence. API keys for OpenAI, Anthropic, and OpenRouter can be
+resolved from environment variables or a separate mode-`0600` credential store,
+with configurable primary, backup, and tertiary order. See
+`docs/configuration.md` for the schema and security model.
+
 ## Goals
 
 - Summarize the operational effect of a change before showing the raw diff.
+- Turn nested JSON, YAML, TOML, and HCL into a linear path-based explanation.
+- Compare structured configuration by path instead of punctuation and line movement.
 - Identify destructive, high-blast-radius, or difficult-to-reverse changes.
 - Correlate source changes with GitHub Actions jobs, Spacelift runs, and deployment targets.
 - Check OpenTofu/Terraform, Ansible, workflow YAML, and shell commands for common hazards.
@@ -65,11 +84,163 @@ make install PREFIX="$HOME/.local"
 
 ## Toolkit commands
 
+### `config`
+
+Manage user defaults and AI credential routing:
+
+```sh
+rcdo config set --key defaults.environment --value production
+rcdo config set --key commands.config-explain.width --value 60
+rcdo config ai-order --primary openai --backup anthropic --tertiary openrouter
+rcdo config credential-set --provider openai --from-env OPENAI_API_KEY
+rcdo config ai-status
+rcdo config ai-resolve
+```
+
+Keys supplied through `--stdin` or `--from-env` never appear in toolkit output.
+The credential file is permission-checked and is not part of the ordinary YAML
+configuration.
+
+### `ai-assist`
+
+Use a configured model to explain, debug, or propose fixes for infrastructure
+configuration. Every model request requires the non-configurable `--ai` flag.
+
+```sh
+rcdo config set --key providers.openai.model --value YOUR_APPROVED_MODEL
+rcdo ai-assist --ai --action explain --target config --domain aws --input service.yaml
+rcdo ai-assist --ai --action debug --target ansible --input playbook.yml
+rcdo ai-assist --ai --action fix --target hcl --domain terraform --input main.tf
+rcdo ai-assist --ai --action debug --target repo --domain docker --repo .
+```
+
+Targets are `config`, `ansible`, `hcl`, and `repo`. Domain guidance covers AWS,
+AliCloud, Terraform, OpenTofu, Docker, GitHub Actions, and Ansible. Inputs are
+bounded and common secrets are redacted before transmission. Repository mode
+collects supported configuration files while skipping dependency, VCS, build,
+and common secret paths. AI fixes are suggestions only and never write files.
+See `docs/configuration.md` for the provider and data-handling details.
+
+### `review` / `git-review`
+
+Run one accessible review over a Git revision range or the current working tree.
+The command inventories changed and untracked files, performs semantic config
+comparison, scans workflows and Ansible, applies dangerous-command and cloud
+policy rules, and enforces the repository policy when present.
+
+```sh
+rcdo review --base origin/main --head HEAD --environment production
+rcdo git-review --base HEAD --repo-policy examples/repository-policy.yaml
+```
+
+### Repository and operational policy
+
+`.rcdo/policy.yaml` can assign owners and severities to critical paths,
+require companion changes such as runbooks, and reject repository-specific
+content patterns. See `examples/repository-policy.yaml`.
+
+```sh
+git diff --name-status origin/main...HEAD |
+  rcdo repo-policy-check --repo-policy .rcdo/policy.yaml
+
+rcdo ops-policy-check --input infrastructure/network.tf --environment production
+```
+
+The built-in operational pack detects public CIDRs, wildcard permissions,
+disabled encryption or deletion protection, and privileged workloads.
+
+### Safe structured editing
+
+`config-set` and `config-remove` modify JSON, YAML, TOML, and HCL by complete path.
+They show a redacted semantic preview by default and write atomically only with
+`--write`. HCL changes use its syntax-aware writer and address attributes inside
+existing block paths; they do not invent ambiguous blocks or edit inside an
+attribute expression.
+
+```sh
+rcdo config-set --input service.yaml --path service.replicas --value 4
+rcdo config-set --input service.yaml --path service.image --value api:v2 --string --write
+rcdo config-remove --input service.json --path obsolete_setting
+```
+
+### Resumable review sessions
+
+Persist a finding report and work through it in severity order. Acknowledgement
+requires a note and is stored with a UTC timestamp.
+
+```sh
+rcdo review-session start --report review.json --change-id PR-42 --commit COMMIT
+rcdo review-session next
+rcdo review-session acknowledge --id FINDING-ID --note "Reviewed with platform owner"
+rcdo review-session status
+```
+
+### `error-explain`
+
+Turn dense command failures into a labeled probable cause, next action, and a
+small amount of redacted original evidence.
+
+```sh
+tofu apply 2>&1 | error-explain --tool tofu
+kubectl apply -f service.yaml 2>&1 | error-explain --tool kubectl --format json
+```
+
+### `config-diff` (MVP available)
+
+Compare two JSON, YAML, TOML, or HCL documents by complete configuration path.
+Formatting-only changes and object-key reordering disappear, leaving added,
+removed, and changed values in linear reading order. Secret changes remain
+visible as changes while their values stay redacted.
+
+```sh
+# Compare two revisions of the same configuration.
+rcdo config-diff --before production-old.yml --after production-new.yml
+
+# Limit the review to one operational area.
+rcdo config-diff --before old.tf --after new.tf --path resource.aws_db_instance
+
+# Return exit code 10 when a semantic change exists.
+rcdo config-diff --before old.json --after new.json --check
+
+# Compare documents written in different formats.
+rcdo config-diff \
+  --before defaults.json \
+  --after defaults.yaml \
+  --format json
+```
+
+Arrays are compared by index. HCL expressions are compared as normalized source
+expressions; the command does not evaluate variables, providers, or functions.
+
+### `config-explain` (MVP available)
+
+Read structured configuration without relying on indentation, brace matching, or
+visual alignment. The command accepts JSON, YAML, TOML, and HCL, then emits one
+labeled path at a time. Input syntax is detected from the filename or content,
+and likely secret values are redacted unless `--show-secrets` is explicit.
+
+```sh
+# Explain a file from the root, including scalar values.
+rcdo config-explain --input environments/production.tfvars
+
+# Focus speech or magnification on one subtree.
+rcdo config-explain --input inventory.yml --path all.children.production
+
+# Hear structure without reading every value.
+rcdo config-explain --input config.toml --values=false
+
+# Produce deterministic machine-readable output.
+kubectl get deployment api -o json | config-explain --format json
+```
+
+Each entry has a complete path, kind, optional source line, and optional value.
+Use `--syntax` when extensionless or ambiguous input cannot be identified safely.
+
 ### `pr-manager` (MVP available)
 
 Create, inspect, and update pull requests. `inspect` reviews GitHub JSON for stale commits, conflicts, approvals, and failed checks. `create` and `update` produce a readable preview and invoke GitHub CLI only when `--execute` is explicitly supplied.
 
-### `git-diff-walker` (MVP available)
+### `rcdo diff-walk` (MVP available)
 
 Walk a diff one logical change at a time. Provide screen-reader-friendly summaries, optional color, search, file and hunk navigation, and a way to mark findings as reviewed.
 
@@ -77,23 +248,23 @@ The current MVP reads a unified Git diff without invoking Git or changing the re
 
 ```sh
 # Review a working-tree diff.
-git diff | ./dist/git-diff-walker
+git diff | ./dist/rcdo diff-walk
 
 # Hear the summary before choosing a file or hunk.
-git diff | ./dist/git-diff-walker --summary-only
-git diff | ./dist/git-diff-walker --file 2 --hunk 1
+git diff | ./dist/rcdo diff-walk --summary-only
+git diff | ./dist/rcdo diff-walk --file 2 --hunk 1
 
 # Find changed lines concerning production.
-git diff | ./dist/git-diff-walker --search production
+git diff | ./dist/rcdo diff-walk --search production
 
 # Save structured output for another tool.
-git diff | ./dist/git-diff-walker --format json > diff-review.json
+git diff | ./dist/rcdo diff-walk --format json > diff-review.json
 
 # Review an existing patch without touching a repository.
-./dist/git-diff-walker --input proposed-change.diff
+./dist/rcdo diff-walk --input proposed-change.diff
 ```
 
-Run `./dist/git-diff-walker --help` for every option. Optional color and persistent reviewed-item tracking remain planned features; neither is required for nonvisual use.
+Run `./dist/rcdo diff-walk --help` for every option. Optional color and persistent reviewed-item tracking remain planned features; neither is required for nonvisual use.
 
 ### `git-danger-check` (MVP available)
 
@@ -140,7 +311,7 @@ Combine finding reports from the pull request, GitHub Actions, OpenTofu, Spaceli
 Name reports and declare the required coverage explicitly:
 
 ```sh
-deploy-review \
+rcdo deploy-review \
   --report pull-request=reports/pr.json \
   --report opentofu=reports/tofu.json \
   --require pull-request \
@@ -153,7 +324,7 @@ deploy-review \
 Apply one versioned coverage manifest to an entire infrastructure change. The manifest binds a change ID, commit, environment, required toolchain components, and their finding reports. Relative report paths resolve from the manifest directory. A missing, unreadable, or invalid required report makes the review `INCOMPLETE`.
 
 ```sh
-review-change --manifest review-change.json
+rcdo review-change --manifest review-change.json
 ```
 
 ### `cloud-context-check` (MVP available)
@@ -235,9 +406,11 @@ Live collectors are opt-in. See `docs/workflows.md` for GitHub CLI, OpenTofu, Sp
 1. **Complete:** Shared finding format and accessible text/JSON renderers.
 2. **Complete:** Working MVPs for every command in the toolkit.
 3. **Complete:** OpenTofu plan JSON, GitHub pull-request snapshot, Spacelift snapshot, and cloud-context inspection.
-4. **Next:** Organization-specific AWS and Alicloud policy packs plus custom deployment-kit adapters.
-5. **In progress:** Live read-only collection and required-component coverage reporting. Coverage manifests are available; richer collector provenance remains next.
-6. **In progress:** CI annotations and expiring suppressions are available. Persistent review history, signed evidence, and incident regression fixtures remain next.
+4. **Complete:** Path-based explanation and semantic comparison of JSON, YAML, TOML, and HCL with default secret redaction.
+5. **Complete:** Unified Git review, repository policy, operational policy pack, resumable sessions, safe JSON/YAML/TOML/HCL mutation, and error narration.
+6. **Next:** Organization-specific AWS and Alicloud policy extensions and deployment-kit adapters.
+7. **In progress:** Live read-only collection and required-component coverage reporting. Coverage manifests are available; richer collector provenance remains next.
+8. **In progress:** CI annotations and expiring suppressions are available. Signed evidence and incident regression fixtures remain next.
 
 ## Contributing ideas
 

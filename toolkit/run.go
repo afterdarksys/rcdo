@@ -1,4 +1,4 @@
-// Package toolkit implements the git-tools command suite.
+// Package toolkit implements the RCDO command suite.
 package toolkit
 
 import (
@@ -18,16 +18,16 @@ import (
 	"git-tools/finding"
 )
 
-const Version = "git-tools 0.4.0"
+const Version = "rcdo 1.2.0"
 
 var commandNames = []string{
-	"a11y-output-check", "ansible-check", "cloud-context-check", "deploy-review", "evidence-pack", "gha-tool",
+	"a11y-output-check", "ai-assist", "ansible-check", "cloud-context-check", "config", "config-diff", "config-explain", "config-remove", "config-set", "deploy-review", "diff-walk", "error-explain", "evidence-pack", "gha-tool",
 	"git-danger-check", "git-isimportant-check", "git-update-json",
-	"pr-manager", "review-brief", "review-change", "runbook-check", "spacelift-check", "tofu-check",
+	"ops-policy-check", "pr-manager", "repo-policy-check", "review", "review-brief", "review-change", "review-session", "runbook-check", "spacelift-check", "tofu-check",
 }
 
 func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	if command == "git-tools" || command == "" {
+	if command == "rcdo" || command == "git-tools" || command == "" {
 		if len(args) == 0 || args[0] == "help" || args[0] == "--help" {
 			printHelp(stdout)
 			return 0
@@ -40,7 +40,26 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 	}
 
 	var err error
+	var configPath string
+	args, configPath, err = extractRuntimeConfigFlag(args)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		return 2
+	}
+	if command != "config" {
+		args, err = applyConfiguredDefaults(command, args, configPath)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: %v\n", err)
+			return 2
+		}
+	}
 	switch command {
+	case "config":
+		err = runAppConfig(args, stdin, stdout, stderr)
+	case "ai-assist":
+		err = runAIAssist(args, configPath, stdin, stdout, stderr)
+	case "diff-walk", "git-diff-walker":
+		err = runDiffWalk(args, stdin, stdout, stderr)
 	case "git-danger-check":
 		err = runRuleCheck(command, args, stdin, stdout, stderr, dangerRules)
 	case "gha-tool":
@@ -65,6 +84,24 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		err = runReviewChange(args, stdout, stderr)
 	case "cloud-context-check":
 		err = runCloudContextCheck(args, stdin, stdout, stderr)
+	case "config-explain":
+		err = runConfigExplain(args, stdin, stdout, stderr)
+	case "config-diff":
+		err = runConfigDiff(args, stdin, stdout, stderr)
+	case "config-set":
+		err = runConfigMutate("set", args, stdin, stdout, stderr)
+	case "config-remove":
+		err = runConfigMutate("remove", args, stdin, stdout, stderr)
+	case "review", "git-review":
+		err = runRepositoryReview(args, stdin, stdout, stderr)
+	case "repo-policy-check":
+		err = runRepositoryPolicyCheck(args, stdin, stdout, stderr)
+	case "ops-policy-check":
+		err = runOperationalPolicyCheck(args, stdin, stdout, stderr)
+	case "review-session":
+		err = runReviewSession(args, stdout, stderr)
+	case "error-explain":
+		err = runErrorExplain(args, stdin, stdout, stderr)
 	case "review-brief":
 		err = runReviewBrief(args, stdin, stdout, stderr)
 	case "a11y-output-check":
@@ -91,13 +128,12 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 }
 
 func printHelp(w io.Writer) {
-	fmt.Fprintln(w, "git-tools: accessible infrastructure change review")
-	fmt.Fprintln(w, "Usage: git-tools COMMAND [options]")
+	fmt.Fprintln(w, "rcdo: Ryan Coleman's accessible DevOps toolkit")
+	fmt.Fprintln(w, "Usage: rcdo COMMAND [options]")
 	fmt.Fprintln(w, "Commands:")
 	for _, name := range commandNames {
 		fmt.Fprintf(w, "  %s\n", name)
 	}
-	fmt.Fprintln(w, "  git-diff-walker (separate command)")
 	fmt.Fprintln(w, "All review commands accept --format text or --format json.")
 }
 

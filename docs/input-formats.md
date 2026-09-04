@@ -2,6 +2,52 @@
 
 All review commands are offline-first. They read standard input by default or a file supplied with `--input`. They do not fetch cloud or repository data themselves, so a missing credential or unavailable service cannot silently reduce review coverage.
 
+## Structured configuration explanation
+
+`config-explain` accepts JSON, YAML, TOML, and native HCL. It detects syntax by
+file extension first, then uses conservative content hints for standard input.
+Pass `--syntax json`, `--syntax yaml`, `--syntax toml`, or `--syntax hcl` when
+input is ambiguous.
+
+Paths begin at `$`, use dots for ordinary keys, brackets for array indexes, and
+quoted brackets for keys that contain punctuation. For example:
+
+```text
+$.services.api.ports[0]
+$["team.example.com/owner"]
+$.resource.aws_instance.web.instance_type
+```
+
+`--path services.api` accepts a shorthand root path. Secret-like paths such as
+`password`, `token`, `api_key`, `private_key`, and `credentials` are redacted by
+default in both text and JSON output. `--show-secrets` is intentionally explicit.
+
+## Structured configuration comparison
+
+`config-diff` requires `--before FILE` and `--after FILE`. One, but not both, may
+be `-` for standard input. By default, a successful comparison exits 0 whether
+or not changes exist. Pass `--check` to return the toolkit's review exit code 10
+when changes are present.
+
+```sh
+rcdo config-diff \
+  --before config/main.before.tf \
+  --after config/main.tf \
+  --path resource.aws_instance \
+  --check
+```
+
+Use `--syntax` when both inputs share an extensionless format. For mixed or
+ambiguous formats, use `--before-syntax` and `--after-syntax`. Object key order,
+comments, and presentation whitespace do not create changes. Arrays are
+compared by zero-based index. HCL expressions are whitespace-normalized but are
+not evaluated, so two different expressions that produce the same runtime value
+are still reported as changed.
+
+Comparison uses the original values internally, then redacts the rendered
+before-and-after values. A password or token rotation is therefore reported even
+when both displayed values are `[REDACTED]`.
+
 ## Pull requests
 
 Generate an inspection snapshot with GitHub CLI:
@@ -53,7 +99,7 @@ Create component reports with `--format json`, then combine them. Name every
 report used in a required coverage check:
 
 ```sh
-deploy-review \
+rcdo deploy-review \
   --report pull-request=pr.json \
   --report opentofu=tofu.json \
   --report spacelift=spacelift.json \

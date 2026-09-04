@@ -14,6 +14,12 @@ This document deliberately separates executable evidence from integration assump
 - Default-preview behavior for file and GitHub mutations.
 - Owner-attributed suppressions with required future expiry dates.
 - Mocked command-shape tests for read-only external collectors.
+- Semantic explanation and comparison fixtures for JSON, YAML, TOML, and HCL.
+- Preview-only and atomic-write tests for JSON, YAML, TOML, and HCL mutation.
+- Unified read-only Git review, repository-policy enforcement, and resumable review sessions.
+- Default redaction for configuration diffs, mutation previews, and narrated errors.
+- Configuration precedence, credential redaction, mode-`0600` enforcement, and three-slot AI routing.
+- Explicit, non-configurable AI activation; bounded/redacted inputs; mocked OpenAI, Anthropic, and OpenRouter request/response handling.
 
 ## Requires validation in each workplace
 
@@ -25,6 +31,11 @@ This document deliberately separates executable evidence from integration assump
 - Ansible inventories, collections, Vault setup, custom modules, and check-mode limitations.
 - Actionlint installation and organization-specific runner labels.
 - CI licensing and permissions for SARIF upload on private repositories.
+- Repository policy owners, critical-path patterns, companion-file requirements, and approved exceptions.
+- Built-in operational-policy matches against organization-specific AWS, Alicloud, Kubernetes, and IAM conventions.
+- Review-session storage location, retention, ticket linkage, and acknowledgement language.
+- Whether plaintext mode-`0600` API-key storage is allowed or environment/secret-manager resolution is required.
+- Approved AI models, provider endpoints, billing limits, retention terms, failover data sharing, and the effectiveness of redaction against representative repositories.
 
 ## Blocked integration
 

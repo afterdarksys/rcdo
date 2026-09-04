@@ -81,11 +81,23 @@ func writeWrapped(w io.Writer, value string, width int) {
 		} else if indent != "" {
 			candidate = indent + word
 		}
-		if len(candidate) > width && line != "" {
+		if len([]rune(candidate)) > width && line != "" {
 			fmt.Fprintln(w, line)
-			line = indent + word
-		} else {
+			line = ""
+			candidate = indent + word
+		}
+		if len([]rune(candidate)) <= width {
 			line = candidate
+			continue
+		}
+		wordRunes := []rune(word)
+		available := width - len([]rune(indent))
+		for len(wordRunes) > available {
+			fmt.Fprintln(w, indent+string(wordRunes[:available]))
+			wordRunes = wordRunes[available:]
+		}
+		if len(wordRunes) > 0 {
+			line = indent + string(wordRunes)
 		}
 	}
 	if line != "" {

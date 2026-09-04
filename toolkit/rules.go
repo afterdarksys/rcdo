@@ -143,10 +143,14 @@ func scanRules(data []byte, resource, environment string, rules []textRule) find
 	return report
 }
 
-var secretAssignment = regexp.MustCompile(`(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)(\s*[:=]\s*)([^\s]+)`)
+var secretAssignment = regexp.MustCompile(`(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,}]+)`)
+var bearerCredential = regexp.MustCompile(`(?i)(authorization\s*[:=]\s*(?:bearer\s+)?|bearer\s+)[A-Za-z0-9._~+/=-]+`)
+var awsAccessKey = regexp.MustCompile(`\b(?:AKIA|ASIA)[A-Z0-9]{16}\b`)
 
 func redactLine(line string) string {
-	return secretAssignment.ReplaceAllString(line, "$1$2[REDACTED]")
+	line = secretAssignment.ReplaceAllString(line, "$1$2[REDACTED]")
+	line = bearerCredential.ReplaceAllString(line, "$1[REDACTED]")
+	return awsAccessKey.ReplaceAllString(line, "[REDACTED-AWS-ACCESS-KEY]")
 }
 
 func runRunbookCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {

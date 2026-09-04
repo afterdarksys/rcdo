@@ -13,7 +13,7 @@ Ensure `$HOME/.local/bin` is on `PATH`.
 ## Pull-request review
 
 ```sh
-pr-manager inspect \
+rcdo pr-manager inspect \
   --collect 42 \
   --repo OWNER/REPOSITORY \
   --expect-commit COMMIT_SHA \
@@ -26,7 +26,7 @@ Collection uses the installed GitHub CLI. Authentication or API failures produce
 
 ```sh
 tofu plan -out=review.tfplan
-tofu-check \
+rcdo tofu-check \
   --plan review.tfplan \
   --environment production \
   --format json > tofu-review.json
@@ -37,7 +37,7 @@ The saved plan is converted using `tofu show -json`. The checker accepts compati
 ## Spacelift review
 
 ```sh
-spacelift-check \
+rcdo spacelift-check \
   --stack production-network \
   --run RUN_ID \
   --expect-stack production-network \
@@ -50,7 +50,7 @@ This uses `spacectl stack show --output json --no-color`. It does not confirm, a
 ## Cloud identity gate
 
 ```sh
-cloud-context-check \
+rcdo cloud-context-check \
   --collect \
   --expect-cloud aws \
   --expect-account 111111111111 \
@@ -64,8 +64,8 @@ For Alicloud, use `--expect-cloud alicloud`. The collector invokes only STS call
 ## GitHub Actions and Ansible
 
 ```sh
-gha-tool check --input .github/workflows/deploy.yml --native
-ansible-check --input playbooks/deploy.yml --native
+rcdo gha-tool check --input .github/workflows/deploy.yml --native
+rcdo ansible-check --input playbooks/deploy.yml --native
 ```
 
 `gha-tool --native` uses `actionlint` when installed. `ansible-check --native` uses `ansible-playbook --syntax-check`. A missing checker is reported as incomplete coverage.
@@ -73,7 +73,7 @@ ansible-check --input playbooks/deploy.yml --native
 ## Policy exceptions
 
 ```sh
-gha-tool check \
+rcdo gha-tool check \
   --input .github/workflows/internal.yml \
   --policy examples/policy.json
 ```
@@ -83,8 +83,8 @@ Suppressions require an ID prefix, owner, reason, and future expiry date. Expire
 ## CI output
 
 ```sh
-git-danger-check --input deploy.sh --format github
-git-danger-check --input deploy.sh --format sarif > danger.sarif
+rcdo git-danger-check --input deploy.sh --format github
+rcdo git-danger-check --input deploy.sh --format sarif > danger.sarif
 ```
 
 GitHub format emits escaped workflow annotations. SARIF output uses version 2.1.0. GitHub Code Scanning availability depends on repository and organization licensing.
@@ -95,10 +95,51 @@ Generate each component report with `--format json`, place the paths in a
 versioned change manifest, and run:
 
 ```sh
-review-change --manifest review-change.json --format text
+rcdo review-change --manifest review-change.json --format text
 ```
 
 The command exits 30 when any required report is absent, unreadable, invalid,
 or already contains incomplete checks. Keep `deployment-kit` in
 `required_components` even before an adapter exists: its missing report is an
 intentional fail-closed signal, not a reason to silently omit that coverage.
+
+## Daily repository review
+
+Review committed branch changes:
+
+```sh
+rcdo review \
+  --base origin/main \
+  --head HEAD \
+  --environment production \
+  --repo-policy .rcdo/policy.yaml
+```
+
+Omit `--head` to include staged, unstaged, and untracked working-tree files.
+Collection invokes only read-only Git commands. Missing evidence makes the
+result incomplete.
+
+Save JSON output and start a resumable review:
+
+```sh
+rcdo review --base origin/main --head HEAD --format json > review.json
+rcdo review-session start \
+  --report review.json \
+  --change-id PR-42 \
+  --commit COMMIT_SHA
+rcdo review-session next
+```
+
+## Safe configuration mutation
+
+Preview first, then repeat the exact command with `--write`:
+
+```sh
+rcdo config-set --input environments/production.yaml --path api.replicas --value 4
+rcdo config-set --input environments/production.yaml --path api.replicas --value 4 --write
+```
+
+JSON values support booleans, numbers, null, arrays, and objects. Use `--string`
+for literal text. YAML and TOML documents are re-encoded; HCL is rewritten with
+its syntax-aware formatter. Use `config-diff` to review the semantic result and
+Git to inspect presentation changes.

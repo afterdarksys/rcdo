@@ -187,7 +187,7 @@ func atomicReplace(path string, data []byte, stdout io.Writer) error {
 	if err != nil {
 		return fmt.Errorf("stat input %q: %w", path, err)
 	}
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".git-tools-*")
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".rcdo-*")
 	if err != nil {
 		return fmt.Errorf("create temporary file: %w", err)
 	}
