@@ -3,6 +3,7 @@ package toolkit
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -17,12 +18,12 @@ import (
 	"git-tools/finding"
 )
 
-const Version = "git-tools 0.3.0"
+const Version = "git-tools 0.4.0"
 
 var commandNames = []string{
 	"a11y-output-check", "ansible-check", "cloud-context-check", "deploy-review", "evidence-pack", "gha-tool",
 	"git-danger-check", "git-isimportant-check", "git-update-json",
-	"pr-manager", "review-brief", "runbook-check", "spacelift-check", "tofu-check",
+	"pr-manager", "review-brief", "review-change", "runbook-check", "spacelift-check", "tofu-check",
 }
 
 func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -60,6 +61,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		err = runJSONUpdate(args, stdin, stdout, stderr)
 	case "deploy-review":
 		err = runDeployReview(args, stdin, stdout, stderr)
+	case "review-change":
+		err = runReviewChange(args, stdout, stderr)
 	case "cloud-context-check":
 		err = runCloudContextCheck(args, stdin, stdout, stderr)
 	case "review-brief":
@@ -216,7 +219,30 @@ func makeFinding(id string, severity finding.Severity, title, resource, action, 
 	}
 }
 
-func normalizedID(prefix string, index int) string { return fmt.Sprintf("%s-%03d", prefix, index+1) }
+// stableFindingID keeps acknowledgements useful when unrelated findings are
+// inserted earlier in a report. Only genuinely identical findings receive a
+// numeric disambiguator.
+func stableFindingID(report *finding.Report, prefix string, parts ...string) string {
+	for index := range parts {
+		parts[index] = strings.ToLower(strings.TrimSpace(parts[index]))
+	}
+	digest := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
+	base := fmt.Sprintf("%s-%X", strings.ToUpper(prefix), digest[:5])
+	candidate := base
+	for duplicate := 2; ; duplicate++ {
+		used := false
+		for _, item := range report.Findings {
+			if item.ID == candidate {
+				used = true
+				break
+			}
+		}
+		if !used {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, duplicate)
+	}
+}
 
 func decodeObject(data []byte) (map[string]any, error) {
 	var object map[string]any

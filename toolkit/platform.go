@@ -93,7 +93,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 				severity = finding.SeverityCritical
 			}
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("TOFU-REPLACE", len(report.Findings)), severity, "Resource will be replaced",
+				stableFindingID(&report, "TOFU-REPLACE", resource, actions), severity, "Resource will be replaced",
 				resource, actions, options.environment, "The plan contains both delete and create actions.",
 				"actions: "+actions, "Confirm downtime, data migration, dependencies, and tested rollback before applying.",
 			))
@@ -103,7 +103,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 				severity = finding.SeverityCritical
 			}
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("TOFU-DELETE", len(report.Findings)), severity, "Resource will be deleted",
+				stableFindingID(&report, "TOFU-DELETE", resource, actions), severity, "Resource will be deleted",
 				resource, actions, options.environment, "The plan contains a delete action.",
 				"actions: "+actions, "Verify the target identity, dependents, backups, retention behavior, and rollback plan.",
 			))
@@ -113,7 +113,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 		after := strings.ToLower(string(serializedAfter))
 		if containsAny(after, `"0.0.0.0/0"`, `"::/0"`, `"public":true`, `"publicly_accessible":true`) {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("TOFU-PUBLIC", len(report.Findings)), finding.SeverityCritical,
+				stableFindingID(&report, "TOFU-PUBLIC", resource, actions), finding.SeverityCritical,
 				"Resource may become publicly accessible", resource, actions, options.environment,
 				"The planned after-state contains a public-access indicator.", "matched public access value in after-state",
 				"Restrict ingress or public access and obtain the required security review.",
@@ -122,7 +122,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 		identityResource := containsAny(strings.ToLower(change.Type), "iam", "ram_", "role", "policy")
 		if identityResource && hasAction(change.Change.Actions, "update") {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("TOFU-IAM", len(report.Findings)), finding.SeverityHigh,
+				stableFindingID(&report, "TOFU-IAM", resource, actions), finding.SeverityHigh,
 				"Identity or policy resource changes", resource, actions, options.environment,
 				"The update affects an identity, role, or policy resource.", "resource type: "+change.Type,
 				"Review added permissions, trust relationships, conditions, and privilege-escalation paths.",
@@ -134,7 +134,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 			continue
 		}
 		report.Findings = append(report.Findings, makeFinding(
-			normalizedID("TOFU-DRIFT", len(report.Findings)), finding.SeverityWarning,
+			stableFindingID(&report, "TOFU-DRIFT", drift.Address, strings.Join(drift.Change.Actions, ",")), finding.SeverityWarning,
 			"Resource drift detected", drift.Address, strings.Join(drift.Change.Actions, ","), options.environment,
 			"The real resource changed outside the reviewed configuration.", "resource type: "+drift.Type,
 			"Determine who or what changed the resource before applying a plan that may overwrite it.",
@@ -147,7 +147,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 				resource = "OpenTofu check"
 			}
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("TOFU-CHECK", len(report.Findings)), finding.SeverityHigh,
+				stableFindingID(&report, "TOFU-CHECK", resource, check.Status), finding.SeverityHigh,
 				"OpenTofu check failed", resource, "apply", options.environment,
 				"A precondition, postcondition, or check block did not pass.", "status: "+check.Status,
 				"Resolve the failed check and create a fresh plan.",

@@ -1,0 +1,26 @@
+{
+  "schema_version": "1",
+  "change_id": "PR-42",
+  "commit": "replace-with-reviewed-commit-sha",
+  "environment": "production",
+  "required_components": [
+    "pull-request",
+    "github-actions",
+    "opentofu",
+    "spacelift",
+    "ansible",
+    "cloud-context",
+    "runbook",
+    "deployment-kit"
+  ],
+  "reports": {
+    "pull-request": "reports/pr.json",
+    "github-actions": "reports/gha.json",
+    "opentofu": "reports/tofu.json",
+    "spacelift": "reports/spacelift.json",
+    "ansible": "reports/ansible.json",
+    "cloud-context": "reports/cloud.json",
+    "runbook": "reports/runbook.json",
+    "deployment-kit": "reports/deployment-kit.json"
+  }
+}

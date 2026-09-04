@@ -49,14 +49,60 @@ AWS `get-caller-identity` output may use `Account`. Alicloud snapshots may use `
 
 ## Combined deployment review
 
-Create component reports with `--format json`, then combine them:
+Create component reports with `--format json`, then combine them. Name every
+report used in a required coverage check:
 
 ```sh
 deploy-review \
-  --report pr.json \
-  --report tofu.json \
-  --report spacelift.json \
-  --report ansible.json
+  --report pull-request=pr.json \
+  --report opentofu=tofu.json \
+  --report spacelift=spacelift.json \
+  --report ansible=ansible.json \
+  --require pull-request \
+  --require opentofu \
+  --require spacelift \
+  --require ansible \
+  --require cloud-context
 ```
 
-Unreadable or invalid component reports make the combined result `INCOMPLETE`.
+Unreadable, invalid, or absent required component reports make the combined
+result `INCOMPLETE`. A bare `--report FILE` remains supported and derives the
+component name from the filename, but explicit `COMPONENT=FILE` naming is safer.
+
+## Change review manifest
+
+`review-change` provides a repeatable coverage contract for the full toolchain:
+
+```json
+{
+  "schema_version": "1",
+  "change_id": "PR-42",
+  "commit": "0123456789abcdef",
+  "environment": "production",
+  "required_components": [
+    "pull-request",
+    "github-actions",
+    "opentofu",
+    "spacelift",
+    "ansible",
+    "cloud-context",
+    "runbook",
+    "deployment-kit"
+  ],
+  "reports": {
+    "pull-request": "reports/pr.json",
+    "github-actions": "reports/gha.json",
+    "opentofu": "reports/tofu.json",
+    "spacelift": "reports/spacelift.json",
+    "ansible": "reports/ansible.json",
+    "cloud-context": "reports/cloud.json",
+    "runbook": "reports/runbook.json",
+    "deployment-kit": "reports/deployment-kit.json"
+  }
+}
+```
+
+Report paths are resolved relative to the manifest. Component names are
+case-insensitive, and underscores normalize to hyphens. Findings whose
+environment differs from the manifest also make the combined review
+`INCOMPLETE`.

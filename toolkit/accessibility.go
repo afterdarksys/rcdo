@@ -125,7 +125,7 @@ func runA11yOutputCheck(args []string, stdin io.Reader, stdout, stderr io.Writer
 		line := scanner.Text()
 		if ansiPattern.MatchString(line) {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("A11Y-ANSI", len(report.Findings)), finding.SeverityWarning,
+				stableFindingID(&report, "A11Y-ANSI", resource, line), finding.SeverityWarning,
 				"Output contains terminal control sequences", resource, "read output", options.environment,
 				"Color or cursor controls can create noisy or misleading screen-reader output.", fmt.Sprintf("line %d contains ANSI escape bytes", lineNumber),
 				"Provide a plain-text or --no-color mode and never use color as the only signal.",
@@ -133,7 +133,7 @@ func runA11yOutputCheck(args []string, stdin io.Reader, stdout, stderr io.Writer
 		}
 		if strings.ContainsRune(line, '\t') {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("A11Y-TAB", len(report.Findings)), finding.SeverityWarning,
+				stableFindingID(&report, "A11Y-TAB", resource, line), finding.SeverityWarning,
 				"Output contains tab-based alignment", resource, "read output", options.environment,
 				"Tab alignment is unpredictable with magnification and speech navigation.", fmt.Sprintf("line %d contains a tab", lineNumber),
 				"Use labeled fields on separate lines or ordinary spaces.",
@@ -141,7 +141,7 @@ func runA11yOutputCheck(args []string, stdin io.Reader, stdout, stderr io.Writer
 		}
 		if len([]rune(line)) > maxLine {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("A11Y-WIDTH", len(report.Findings)), finding.SeverityWarning,
+				stableFindingID(&report, "A11Y-WIDTH", resource, line), finding.SeverityWarning,
 				"Output line is difficult to read when magnified", resource, "read output", options.environment,
 				fmt.Sprintf("The line exceeds the configured width of %d characters.", maxLine), fmt.Sprintf("line %d length %d", lineNumber, len([]rune(line))),
 				"Wrap prose and put labels and values on predictable lines.",

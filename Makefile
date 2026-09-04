@@ -1,6 +1,6 @@
 .PHONY: build install test vet verify
 
-ALIASES = a11y-output-check ansible-check cloud-context-check deploy-review evidence-pack gha-tool git-danger-check git-isimportant-check git-update-json pr-manager review-brief runbook-check spacelift-check tofu-check
+ALIASES = a11y-output-check ansible-check cloud-context-check deploy-review evidence-pack gha-tool git-danger-check git-isimportant-check git-update-json pr-manager review-brief review-change runbook-check spacelift-check tofu-check
 
 build:
 	mkdir -p dist

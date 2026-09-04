@@ -105,7 +105,7 @@ func runNativeRuleCheck(name string, args []string, stdin io.Reader, stdout, std
 					evidence = evidence[:500] + "..."
 				}
 				report.Findings = append(report.Findings, makeFinding(
-					normalizedID("NATIVE", len(report.Findings)), finding.SeverityHigh,
+					stableFindingID(&report, "NATIVE", name, options.input, evidence), finding.SeverityHigh,
 					nativeProgram+" reported an error", basename(options.input), "validate", options.environment,
 					"The native syntax or semantic checker exited unsuccessfully.", redactLine(evidence),
 					"Resolve the native checker output and rerun the review.",
@@ -131,7 +131,7 @@ func scanRules(data []byte, resource, environment string, rules []textRule) find
 		line := scanner.Text()
 		for _, rule := range rules {
 			if rule.pattern.MatchString(line) {
-				id := normalizedID(rule.id, len(report.Findings))
+				id := stableFindingID(&report, rule.id, resource, line)
 				report.Findings = append(report.Findings, makeFinding(
 					id, rule.severity, rule.title, resource, "review line", environment,
 					fmt.Sprintf("Rule %s matched line %d.", rule.id, lineNumber),
@@ -185,7 +185,7 @@ func runRunbookCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) e
 		}
 		if !found {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID(requirement.name, len(report.Findings)), requirement.severity,
+				stableFindingID(&report, requirement.name, basename(options.input), requirement.name), requirement.severity,
 				requirement.title, basename(options.input), "complete runbook", options.environment,
 				"A required operational concept was not found.", "searched case-insensitively", requirement.remediation,
 			))

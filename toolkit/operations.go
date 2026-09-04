@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"git-tools/diffwalk"
@@ -54,7 +55,7 @@ func runImportantCheck(args []string, stdin io.Reader, stdout, stderr io.Writer)
 			severity = finding.SeverityHigh
 		}
 		report.Findings = append(report.Findings, makeFinding(
-			normalizedID("IMPORTANT", len(report.Findings)), severity, "Important path changed", file.Path,
+			stableFindingID(&report, "IMPORTANT", file.Path, string(file.Change)), severity, "Important path changed", file.Path,
 			string(file.Change), options.environment, fmt.Sprintf("Path matches protected pattern %q.", pattern),
 			fmt.Sprintf("hunks %d; additions %d; deletions %d", summary.Hunks, summary.Additions, summary.Deletions),
 			"Review this file explicitly and obtain the owner required by repository policy.",
@@ -223,17 +224,19 @@ func (s *stringList) Set(value string) error {
 }
 
 func runDeployReview(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	var reports stringList
+	var reports, required stringList
 	_, options, err := parseFlags("deploy-review", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
-		fs.Var(&reports, "report", "finding JSON report to combine; may be repeated")
+		fs.Var(&reports, "report", "finding report as COMPONENT=FILE or FILE; may be repeated")
+		fs.Var(&required, "require", "required component name; may be repeated")
 		return &options
 	})
 	if err != nil {
 		return err
 	}
 	combined := finding.Report{Findings: []finding.Finding{}, CompletedChecks: []string{}, IncompleteChecks: []string{}}
+	present := map[string]bool{}
 	if len(reports) == 0 {
 		data, readErr := readInput(options.input, stdin)
 		if readErr != nil {
@@ -242,18 +245,164 @@ func runDeployReview(args []string, stdin io.Reader, stdout, stderr io.Writer) e
 		if err := appendReport(&combined, data, "input"); err != nil {
 			return err
 		}
+		present["input"] = true
 	} else {
-		for _, path := range reports {
+		for _, spec := range reports {
+			component, path, specErr := parseReportSpec(spec)
+			if specErr != nil {
+				return specErr
+			}
 			data, readErr := os.ReadFile(path)
 			if readErr != nil {
-				combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("could not read report %s: %v", path, readErr))
+				combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: could not read report %s: %v", component, path, readErr))
 				continue
 			}
-			if err := appendReport(&combined, data, path); err != nil {
+			if err := appendReport(&combined, data, component); err != nil {
 				combined.IncompleteChecks = append(combined.IncompleteChecks, err.Error())
+				continue
+			}
+			present[component] = true
+		}
+	}
+	for _, component := range required {
+		component = normalizeComponent(component)
+		if component == "" {
+			return fmt.Errorf("--require component cannot be empty")
+		}
+		if !present[component] {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, "required component "+component+" has no valid report")
+		}
+	}
+	return emitReportOptions(stdout, options, combined)
+}
+
+func parseReportSpec(spec string) (string, string, error) {
+	component, path, found := strings.Cut(spec, "=")
+	if !found {
+		path = spec
+		component = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	}
+	component = normalizeComponent(component)
+	path = strings.TrimSpace(path)
+	if component == "" || path == "" {
+		return "", "", fmt.Errorf("invalid --report %q; expected COMPONENT=FILE", spec)
+	}
+	return component, path, nil
+}
+
+func normalizeComponent(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, "_", "-")
+	return value
+}
+
+type reviewChangeManifest struct {
+	SchemaVersion      string            `json:"schema_version"`
+	ChangeID           string            `json:"change_id"`
+	Commit             string            `json:"commit"`
+	Environment        string            `json:"environment"`
+	RequiredComponents []string          `json:"required_components"`
+	Reports            map[string]string `json:"reports"`
+}
+
+func runReviewChange(args []string, stdout, stderr io.Writer) error {
+	var manifestPath, format, policy string
+	fs := flag.NewFlagSet("review-change", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.StringVar(&manifestPath, "manifest", "review-change.json", "change manifest containing required components and report paths")
+	fs.StringVar(&format, "format", "text", "output format: text, json, github, or sarif")
+	fs.StringVar(&policy, "policy", "", "JSON policy containing owned, expiring suppressions")
+	setAccessibleUsage(fs, "review-change", stderr)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() > 0 {
+		return fmt.Errorf("unexpected arguments: %v", fs.Args())
+	}
+	if format != "text" && format != "json" && format != "github" && format != "sarif" {
+		return fmt.Errorf("unknown format %q; expected text, json, github, or sarif", format)
+	}
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return fmt.Errorf("read manifest %q: %w", manifestPath, err)
+	}
+	var manifest reviewChangeManifest
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&manifest); err != nil {
+		return fmt.Errorf("parse manifest %q: %w", manifestPath, err)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("parse manifest %q: trailing content after JSON object", manifestPath)
+	}
+	if manifest.SchemaVersion != "1" {
+		return fmt.Errorf("manifest schema_version must be 1")
+	}
+	if strings.TrimSpace(manifest.ChangeID) == "" || strings.TrimSpace(manifest.Commit) == "" || strings.TrimSpace(manifest.Environment) == "" {
+		return fmt.Errorf("manifest change_id, commit, and environment are required")
+	}
+	if len(manifest.RequiredComponents) == 0 {
+		return fmt.Errorf("manifest required_components must not be empty")
+	}
+
+	combined := finding.Report{
+		Findings:         []finding.Finding{},
+		CompletedChecks:  []string{fmt.Sprintf("change manifest %s; commit %s; environment %s", manifest.ChangeID, manifest.Commit, manifest.Environment)},
+		IncompleteChecks: []string{},
+	}
+	baseDir := filepath.Dir(manifestPath)
+	present := map[string]bool{}
+	declared := map[string]bool{}
+	componentNames := make([]string, 0, len(manifest.Reports))
+	for rawComponent := range manifest.Reports {
+		componentNames = append(componentNames, rawComponent)
+	}
+	sort.Strings(componentNames)
+	for _, rawComponent := range componentNames {
+		reportPath := manifest.Reports[rawComponent]
+		component := normalizeComponent(rawComponent)
+		if component == "" || strings.TrimSpace(reportPath) == "" {
+			return fmt.Errorf("manifest contains an empty component or report path")
+		}
+		if declared[component] {
+			return fmt.Errorf("manifest component %q is duplicated after normalization", component)
+		}
+		declared[component] = true
+		if !filepath.IsAbs(reportPath) {
+			reportPath = filepath.Join(baseDir, reportPath)
+		}
+		reportData, readErr := os.ReadFile(reportPath)
+		if readErr != nil {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: could not read report %s: %v", component, reportPath, readErr))
+			continue
+		}
+		before := len(combined.Findings)
+		if appendErr := appendVersionedReport(&combined, reportData, component); appendErr != nil {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, appendErr.Error())
+			continue
+		}
+		present[component] = true
+		for _, item := range combined.Findings[before:] {
+			if !strings.EqualFold(item.Environment, manifest.Environment) {
+				combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: finding %s environment %q does not match manifest environment %q", component, item.ID, item.Environment, manifest.Environment))
 			}
 		}
 	}
+	seenRequired := map[string]bool{}
+	for _, rawComponent := range manifest.RequiredComponents {
+		component := normalizeComponent(rawComponent)
+		if component == "" {
+			return fmt.Errorf("manifest required_components contains an empty name")
+		}
+		if seenRequired[component] {
+			return fmt.Errorf("manifest required component %q is duplicated", component)
+		}
+		seenRequired[component] = true
+		if !present[component] {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, "required component "+component+" has no valid report")
+		}
+	}
+	options := commonOptions{format: format, environment: manifest.Environment, policy: policy}
 	return emitReportOptions(stdout, options, combined)
 }
 
@@ -277,6 +426,30 @@ func appendReport(combined *finding.Report, data []byte, source string) error {
 		combined.IncompleteChecks = append(combined.IncompleteChecks, source+": "+incomplete)
 	}
 	return nil
+}
+
+func appendVersionedReport(combined *finding.Report, data []byte, source string) error {
+	var envelope struct {
+		SchemaVersion string            `json:"schema_version"`
+		Status        finding.Status    `json:"status"`
+		Findings      []finding.Finding `json:"findings"`
+		Completed     []string          `json:"completed_checks"`
+		Incomplete    []string          `json:"incomplete_checks"`
+	}
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return fmt.Errorf("parse report %s: %w", source, err)
+	}
+	if envelope.SchemaVersion != finding.SchemaVersion {
+		return fmt.Errorf("report %s has schema_version %q; expected %q", source, envelope.SchemaVersion, finding.SchemaVersion)
+	}
+	report := finding.Report{Findings: envelope.Findings, CompletedChecks: envelope.Completed, IncompleteChecks: envelope.Incomplete}
+	if err := report.Validate(); err != nil {
+		return fmt.Errorf("validate report %s: %w", source, err)
+	}
+	if envelope.Status != report.Status() {
+		return fmt.Errorf("report %s claims status %q; calculated status is %q", source, envelope.Status, report.Status())
+	}
+	return appendReport(combined, data, source)
 }
 
 func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -344,7 +517,7 @@ func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writ
 		}
 		if !strings.EqualFold(check.expected, check.actual) {
 			report.Findings = append(report.Findings, makeFinding(
-				normalizedID("CONTEXT", len(report.Findings)), finding.SeverityCritical,
+				stableFindingID(&report, "CONTEXT", check.label, check.expected, check.actual), finding.SeverityCritical,
 				"Cloud context does not match", "deployment-context", "deploy", options.environment,
 				"The active "+check.label+" differs from the explicitly expected value.",
 				fmt.Sprintf("%s expected %s; got %s", check.label, check.expected, check.actual),

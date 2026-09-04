@@ -137,6 +137,25 @@ Perform conservative text checks for broad host patterns, shell usage, ignored f
 
 Combine finding reports from the pull request, GitHub Actions, OpenTofu, Spacelift, Ansible, cloud context, and custom deployment-kit adapters. Missing or invalid component reports make the combined review explicitly `INCOMPLETE`.
 
+Name reports and declare the required coverage explicitly:
+
+```sh
+deploy-review \
+  --report pull-request=reports/pr.json \
+  --report opentofu=reports/tofu.json \
+  --require pull-request \
+  --require opentofu \
+  --require cloud-context
+```
+
+### `review-change` (MVP available)
+
+Apply one versioned coverage manifest to an entire infrastructure change. The manifest binds a change ID, commit, environment, required toolchain components, and their finding reports. Relative report paths resolve from the manifest directory. A missing, unreadable, or invalid required report makes the review `INCOMPLETE`.
+
+```sh
+review-change --manifest review-change.json
+```
+
 ### `cloud-context-check` (MVP available)
 
 Compare an AWS or Alicloud identity snapshot with an explicitly expected cloud, account, and region. A mismatch is critical. A missing field makes the review incomplete. This is intended to stop correct changes from reaching the wrong account.
@@ -217,8 +236,8 @@ Live collectors are opt-in. See `docs/workflows.md` for GitHub CLI, OpenTofu, Sp
 2. **Complete:** Working MVPs for every command in the toolkit.
 3. **Complete:** OpenTofu plan JSON, GitHub pull-request snapshot, Spacelift snapshot, and cloud-context inspection.
 4. **Next:** Organization-specific AWS and Alicloud policy packs plus custom deployment-kit adapters.
-5. **Next:** Live read-only API collection with provenance and coverage reporting.
-6. **Next:** CI annotations, persistent review history, expiring suppressions, signed evidence, and regression fixtures based on anonymized incidents.
+5. **In progress:** Live read-only collection and required-component coverage reporting. Coverage manifests are available; richer collector provenance remains next.
+6. **In progress:** CI annotations and expiring suppressions are available. Persistent review history, signed evidence, and incident regression fixtures remain next.
 
 ## Contributing ideas
 

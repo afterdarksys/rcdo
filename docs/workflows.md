@@ -88,3 +88,17 @@ git-danger-check --input deploy.sh --format sarif > danger.sarif
 ```
 
 GitHub format emits escaped workflow annotations. SARIF output uses version 2.1.0. GitHub Code Scanning availability depends on repository and organization licensing.
+
+## End-to-end coverage gate
+
+Generate each component report with `--format json`, place the paths in a
+versioned change manifest, and run:
+
+```sh
+review-change --manifest review-change.json --format text
+```
+
+The command exits 30 when any required report is absent, unreadable, invalid,
+or already contains incomplete checks. Keep `deployment-kit` in
+`required_components` even before an adapter exists: its missing report is an
+intentional fail-closed signal, not a reason to silently omit that coverage.

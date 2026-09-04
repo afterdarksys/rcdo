@@ -42,7 +42,7 @@ func TestPolicySuppressionsRequireOwnershipAndExpiry(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, stdout, stderr := execute("gha-tool", []string{"--policy", policy}, "steps:\n  - uses: actions/checkout@v4\n")
-	if code != 0 || !strings.Contains(stdout, "suppressed MUTABLE-001 by platform-team") || stderr != "" {
+	if code != 0 || !strings.Contains(stdout, "suppressed MUTABLE-") || !strings.Contains(stdout, "by platform-team") || stderr != "" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 }
@@ -50,7 +50,7 @@ func TestPolicySuppressionsRequireOwnershipAndExpiry(t *testing.T) {
 func TestCIFormats(t *testing.T) {
 	input := "aws ec2 terminate-instances --instance-ids i-123\n"
 	code, stdout, _ := execute("git-danger-check", []string{"--format", "github"}, input)
-	if code != 20 || !strings.Contains(stdout, "::error title=DELETE-001") {
+	if code != 20 || !strings.Contains(stdout, "::error title=DELETE-") {
 		t.Fatalf("github code=%d stdout=%q", code, stdout)
 	}
 	code, stdout, _ = execute("git-danger-check", []string{"--format", "sarif"}, input)
@@ -203,6 +203,76 @@ func TestDeployReviewCombinesFindingReport(t *testing.T) {
 	if code != 20 || !strings.Contains(stdout, "INPUT:X-1") || stderr != "" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
+}
+
+func TestDeployReviewRequiresNamedComponents(t *testing.T) {
+	directory := t.TempDir()
+	report := filepath.Join(directory, "tofu.json")
+	if err := os.WriteFile(report, []byte(`{"findings":[],"completed_checks":["plan"],"incomplete_checks":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"--report", "opentofu=" + report, "--require", "opentofu", "--require", "cloud-context"}
+	code, stdout, stderr := execute("deploy-review", args, "")
+	if code != 30 || !strings.Contains(stdout, "required component cloud-context has no valid report") || stderr != "" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestReviewChangeManifestEnforcesCoverage(t *testing.T) {
+	directory := t.TempDir()
+	report := filepath.Join(directory, "tofu.json")
+	if err := os.WriteFile(report, []byte(`{"schema_version":"1","status":"clean","findings":[],"completed_checks":["plan"],"incomplete_checks":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifest := filepath.Join(directory, "review-change.json")
+	manifestData := `{
+  "schema_version":"1",
+  "change_id":"PR-42",
+  "commit":"abc123",
+  "environment":"production",
+  "required_components":["opentofu","cloud-context"],
+  "reports":{"opentofu":"tofu.json"}
+}`
+	if err := os.WriteFile(manifest, []byte(manifestData), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := execute("review-change", []string{"--manifest", manifest}, "")
+	if code != 30 || !strings.Contains(stdout, "change manifest PR-42; commit abc123; environment production") ||
+		!strings.Contains(stdout, "required component cloud-context has no valid report") || stderr != "" {
+		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+	cloudReport := filepath.Join(directory, "cloud.json")
+	if err := os.WriteFile(cloudReport, []byte(`{"schema_version":"1","status":"clean","findings":[],"completed_checks":["identity"],"incomplete_checks":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	manifestData = strings.Replace(manifestData, `"reports":{"opentofu":"tofu.json"}`, `"reports":{"opentofu":"tofu.json","cloud-context":"cloud.json"}`, 1)
+	if err := os.WriteFile(manifest, []byte(manifestData), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr = execute("review-change", []string{"--manifest", manifest}, "")
+	if code != 0 || !strings.Contains(stdout, "REVIEW RESULT: CLEAN") || stderr != "" {
+		t.Fatalf("clean code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	}
+}
+
+func TestFindingIDsRemainStableWhenEarlierLinesAreInserted(t *testing.T) {
+	input := "aws ec2 terminate-instances --instance-ids i-123\n"
+	_, first, _ := execute("git-danger-check", nil, input)
+	_, second, _ := execute("git-danger-check", nil, "# unrelated comment\n"+input)
+	firstID := textField(first, "ID: ")
+	secondID := textField(second, "ID: ")
+	if firstID == "" || firstID != secondID {
+		t.Fatalf("finding IDs changed: first=%q second=%q", firstID, secondID)
+	}
+}
+
+func textField(output, prefix string) string {
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			return strings.TrimPrefix(line, prefix)
+		}
+	}
+	return ""
 }
 
 func TestRunbookCheckPassesCompleteRunbook(t *testing.T) {
