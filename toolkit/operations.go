@@ -307,11 +307,13 @@ type reviewChangeManifest struct {
 
 func runReviewChange(args []string, stdout, stderr io.Writer) error {
 	var manifestPath, format, policy string
+	var width int
 	fs := flag.NewFlagSet("review-change", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&manifestPath, "manifest", "review-change.json", "change manifest containing required components and report paths")
 	fs.StringVar(&format, "format", "text", "output format: text, json, github, or sarif")
 	fs.StringVar(&policy, "policy", "", "JSON policy containing owned, expiring suppressions")
+	fs.IntVar(&width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
 	setAccessibleUsage(fs, "review-change", stderr)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -402,7 +404,7 @@ func runReviewChange(args []string, stdout, stderr io.Writer) error {
 			combined.IncompleteChecks = append(combined.IncompleteChecks, "required component "+component+" has no valid report")
 		}
 	}
-	options := commonOptions{format: format, environment: manifest.Environment, policy: policy}
+	options := commonOptions{format: format, environment: manifest.Environment, policy: policy, width: width}
 	return emitReportOptions(stdout, options, combined)
 }
 

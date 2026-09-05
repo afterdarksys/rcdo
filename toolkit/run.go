@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -161,6 +162,7 @@ type commonOptions struct {
 	format      string
 	environment string
 	policy      string
+	width       int
 }
 
 func addCommonFlags(fs *flag.FlagSet, options *commonOptions) {
@@ -168,6 +170,17 @@ func addCommonFlags(fs *flag.FlagSet, options *commonOptions) {
 	fs.StringVar(&options.format, "format", "text", "output format: text or json")
 	fs.StringVar(&options.environment, "environment", "unknown", "deployment environment label")
 	fs.StringVar(&options.policy, "policy", "", "JSON policy containing owned, expiring suppressions")
+	fs.IntVar(&options.width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
+}
+
+// overrideIntDefault lets one command take a different default from the common
+// flag set without re-registering the flag, which panics. It updates DefValue
+// too so `--help` does not advertise a default the command will not use.
+func overrideIntDefault(fs *flag.FlagSet, target *int, name string, value int) {
+	*target = value
+	if f := fs.Lookup(name); f != nil {
+		f.DefValue = strconv.Itoa(value)
+	}
 }
 
 func parseFlags(name string, args []string, stderr io.Writer, configure func(*flag.FlagSet) *commonOptions) (*flag.FlagSet, commonOptions, error) {
@@ -183,6 +196,9 @@ func parseFlags(name string, args []string, stderr io.Writer, configure func(*fl
 	}
 	if options.format != "text" && options.format != "json" && options.format != "sarif" && options.format != "github" {
 		return fs, *options, fmt.Errorf("unknown format %q; expected text, json, sarif, or github", options.format)
+	}
+	if options.width < finding.MinTextWidth {
+		return fs, *options, fmt.Errorf("--width must be at least %d", finding.MinTextWidth)
 	}
 	return fs, *options, nil
 }
@@ -221,7 +237,13 @@ func readInput(path string, stdin io.Reader) ([]byte, error) {
 	return data, nil
 }
 
-func emitReport(w io.Writer, format string, report finding.Report) error {
+func emitReport(w io.Writer, format string, width int, report finding.Report) error {
+	// Commands that build commonOptions directly rather than through
+	// addCommonFlags never register --width, so width arrives as 0. Fall back
+	// rather than refusing to render a report the user asked for.
+	if width <= 0 {
+		width = finding.DefaultTextWidth
+	}
 	var err error
 	if format == "json" {
 		err = finding.RenderJSON(w, report)
@@ -230,7 +252,7 @@ func emitReport(w io.Writer, format string, report finding.Report) error {
 	} else if format == "github" {
 		err = finding.RenderGitHub(w, report)
 	} else {
-		err = finding.RenderText(w, report)
+		err = finding.RenderTextWidth(w, report, width)
 	}
 	if err != nil {
 		return err
@@ -246,7 +268,7 @@ func emitReportOptions(w io.Writer, options commonOptions, report finding.Report
 	if err != nil {
 		return err
 	}
-	return emitReport(w, options.format, filtered)
+	return emitReport(w, options.format, options.width, filtered)
 }
 
 func makeFinding(id string, severity finding.Severity, title, resource, action, environment, reason, evidence, remediation string) finding.Finding {

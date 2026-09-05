@@ -9,12 +9,39 @@ import (
 	"strings"
 )
 
-// RenderText writes a linear, labeled report suitable for terminals and screen readers.
+const (
+	// DefaultTextWidth is the line width RenderText wraps to when the caller
+	// does not choose one.
+	DefaultTextWidth = 100
+	// MinTextWidth matches the floor every other width flag in the toolkit
+	// enforces. Below roughly 40 columns a labeled line breaks so often that
+	// the label and its value stop reading as one item.
+	MinTextWidth = 40
+)
+
+// RenderText writes a linear, labeled report suitable for terminals and screen
+// readers, wrapped at DefaultTextWidth.
 func RenderText(w io.Writer, report Report) error {
+	return RenderTextWidth(w, report, DefaultTextWidth)
+}
+
+// RenderTextWidth is RenderText at a caller-chosen line width.
+//
+// Width is a real accessibility control, not cosmetics: this toolkit's users
+// read with screen readers OR LARGE PRINT, and at high magnification a
+// hundred-column line means panning sideways to read one finding — which is
+// exactly where someone loses their place partway down a list of sixteen.
+// Every other text-emitting command already honours --width; the review
+// commands, which are the ones actually run, rendered at a hardcoded 100 and
+// silently ignored the width set in the config file.
+func RenderTextWidth(w io.Writer, report Report, width int) error {
+	if width < MinTextWidth {
+		return fmt.Errorf("text width %d is below the minimum of %d", width, MinTextWidth)
+	}
 	if err := report.Validate(); err != nil {
 		return fmt.Errorf("invalid report: %w", err)
 	}
-	wrapped := &textWrapWriter{destination: w, width: 100}
+	wrapped := &textWrapWriter{destination: w, width: width}
 	w = wrapped
 
 	summary := report.Summary()

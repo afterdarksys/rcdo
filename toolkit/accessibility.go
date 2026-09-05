@@ -18,11 +18,13 @@ import (
 )
 
 func runReviewBrief(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
-	var width int
 	_, options, err := parseFlags("review-brief", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
-		fs.IntVar(&width, "width", 80, "maximum text line width; minimum 40")
+		// The brief is a summary meant to be skimmed, so it wraps narrower than
+		// the common default. Override rather than re-register: registering a
+		// second `width` on the same FlagSet panics.
+		overrideIntDefault(fs, &options.width, "width", 80)
 		return &options
 	})
 	if err != nil {
@@ -30,9 +32,6 @@ func runReviewBrief(args []string, stdin io.Reader, stdout, stderr io.Writer) er
 	}
 	if options.format != "text" {
 		return fmt.Errorf("review-brief supports text output only")
-	}
-	if width < 40 {
-		return fmt.Errorf("--width must be at least 40")
 	}
 	data, err := readInput(options.input, stdin)
 	if err != nil {
@@ -54,12 +53,12 @@ func runReviewBrief(args []string, stdin io.Reader, stdout, stderr io.Writer) er
 	fmt.Fprintf(stdout, "REVIEW RESULT: %s\n", strings.ToUpper(string(report.Status())))
 	fmt.Fprintf(stdout, "FINDINGS: %d\n", len(report.Findings))
 	for index, item := range report.Findings {
-		writeWrapped(stdout, fmt.Sprintf("%d. %s %s: %s", index+1, strings.ToUpper(string(item.Severity)), item.ID, item.Title), width)
-		writeWrapped(stdout, "   Target: "+item.Resource+" in "+item.Environment, width)
-		writeWrapped(stdout, "   Next: "+item.Remediation, width)
+		writeWrapped(stdout, fmt.Sprintf("%d. %s %s: %s", index+1, strings.ToUpper(string(item.Severity)), item.ID, item.Title), options.width)
+		writeWrapped(stdout, "   Target: "+item.Resource+" in "+item.Environment, options.width)
+		writeWrapped(stdout, "   Next: "+item.Remediation, options.width)
 	}
 	for index, incomplete := range report.IncompleteChecks {
-		writeWrapped(stdout, fmt.Sprintf("Incomplete %d: %s", index+1, incomplete), width)
+		writeWrapped(stdout, fmt.Sprintf("Incomplete %d: %s", index+1, incomplete), options.width)
 	}
 	if report.Status() != finding.StatusClean {
 		return reportError{status: report.Status()}

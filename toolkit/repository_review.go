@@ -103,6 +103,7 @@ func runRepositoryReview(args []string, _ io.Reader, stdout, stderr io.Writer) e
 	fs.StringVar(&options.format, "format", "text", "output format: text, json, github, or sarif")
 	fs.StringVar(&options.environment, "environment", "unknown", "deployment environment label")
 	fs.StringVar(&options.policy, "policy", "", "JSON policy containing owned, expiring suppressions")
+	fs.IntVar(&options.width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
 	fs.StringVar(&base, "base", "HEAD", "base Git revision")
 	fs.StringVar(&head, "head", "", "head Git revision; default is the working tree")
 	fs.StringVar(&repoPolicyPath, "repo-policy", ".rcdo/policy.yaml", "repository policy file; missing default is allowed")
