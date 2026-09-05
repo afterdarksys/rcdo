@@ -22,6 +22,16 @@ This document deliberately separates executable evidence from integration assump
 - Explicit, non-configurable AI activation; bounded/redacted inputs; mocked OpenAI, Anthropic, and OpenRouter request/response handling.
 - Read-only HCL and Ansible decomposition with dependency ordering, single-step inspection, and fail-closed unresolved reporting.
 
+## Review evidence and session validation
+
+- jsonprobe adapter fixtures cover required checks, missing and stale observations,
+  contradictory outcomes, failures, duplicate names, and raw diagnostic isolation.
+- Schema-2 review sessions retain complete coverage, bind source report bytes and
+  optional artifact hashes, and optionally recheck a clean Git repository and HEAD.
+- Reading completion preserves blocked and incomplete report status. Sessions expire
+  and refuse acknowledgement when their bound inputs change.
+- These are local integrity checks, not signed provenance or deployment authorization.
+
 ## Requires validation in each workplace
 
 - GitHub authentication, repository rules, required checks, and merge queue behavior.

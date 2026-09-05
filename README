@@ -192,8 +192,17 @@ rcdo config-remove --input service.json --path obsolete_setting
 
 ### Resumable review sessions
 
-Persist a finding report and work through it in severity order. Acknowledgement
-requires a note and is stored with a UTC timestamp.
+Persist a complete versioned finding report and work through it in severity order.
+Acknowledgement records reading, with a note and UTC timestamp; blocking findings
+and incomplete checks remain in force. Report and optional artifact fingerprints
+are rechecked on resume. Sessions expire after 24 hours by default; use --max-age
+to choose a positive lifetime. Bind a clean repository with --repo to recheck HEAD
+and working-tree cleanliness, and store the session outside that repository.
+Legacy schema-1 sessions must be recreated from fresh versioned reports.
+
+Start and acknowledgement return 0 on successful storage; status and next return
+the report status (0/10/20/30). Stale sessions return 30 and refuse acknowledgement.
+Start refuses to overwrite existing sessions.
 
 ```sh
 rcdo review-session start --report review.json --change-id PR-42 --commit COMMIT
@@ -201,6 +210,22 @@ rcdo review-session next
 rcdo review-session acknowledge --id FINDING-ID --note "Reviewed with platform owner"
 rcdo review-session status
 ```
+
+### `jsonprobe-check`
+
+Import aggregate JSON from Missing Utils into the RCDO finding contract. Declare
+required check names explicitly; missing checks, stale evidence, and inconsistent
+results remain INCOMPLETE. Failed readiness checks block the review. The default
+maximum evidence age is 15 minutes. Environment is a supplied review label, not
+verified cloud identity. Raw upstream error messages stay in the source artifact.
+
+```sh
+rcdo jsonprobe-check --input readiness-source.json --require api-health \
+  --environment staging --format json
+```
+
+See [the combined workflow](docs/missing-utils-workflow.md) for a local demo,
+coverage manifests, session binding, exit codes, and evidence limitations.
 
 ### `error-explain`
 

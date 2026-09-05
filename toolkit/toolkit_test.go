@@ -466,7 +466,7 @@ func TestReviewSessionCanResumeAndAcknowledge(t *testing.T) {
 	directory := t.TempDir()
 	reportPath := filepath.Join(directory, "report.json")
 	sessionPath := filepath.Join(directory, "session.json")
-	report := `{"findings":[{"id":"RISK-1","severity":"high","title":"Risk","resource":"prod","action":"review","environment":"production","reason":"danger","evidence":["x"],"confidence":"high","remediation":"stop"}]}`
+	report := `{"schema_version":"1","status":"blocked","completed_checks":["risk check"],"incomplete_checks":[],"findings":[{"id":"RISK-1","severity":"high","title":"Risk","resource":"prod","action":"review","environment":"production","reason":"danger","evidence":["x"],"confidence":"high","remediation":"stop"}]}`
 	if err := os.WriteFile(reportPath, []byte(report), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -475,7 +475,7 @@ func TestReviewSessionCanResumeAndAcknowledge(t *testing.T) {
 		t.Fatalf("start code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 	code, stdout, stderr = execute("review-session", []string{"next", "--session", sessionPath}, "")
-	if code != 0 || !strings.Contains(stdout, "ID: RISK-1") {
+	if code != 20 || !strings.Contains(stdout, "ID: RISK-1") {
 		t.Fatalf("next code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 	code, stdout, stderr = execute("review-session", []string{"ack", "--session", sessionPath, "--id", "RISK-1", "--note", "reviewed with platform"}, "")
@@ -483,7 +483,7 @@ func TestReviewSessionCanResumeAndAcknowledge(t *testing.T) {
 		t.Fatalf("ack code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 	code, stdout, stderr = execute("review-session", []string{"next", "--session", sessionPath}, "")
-	if code != 0 || !strings.Contains(stdout, "REVIEW SESSION COMPLETE") {
+	if code != 20 || !strings.Contains(stdout, "READING COMPLETE") || !strings.Contains(stdout, "REVIEW RESULT: BLOCKED") {
 		t.Fatalf("complete code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 }

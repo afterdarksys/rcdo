@@ -57,6 +57,7 @@ var configurableFlags = map[string]map[string]bool{
 	"error-explain":       flagSet("format", "tool", "evidence-lines"),
 	"ops-policy-check":    flagSet("format", "width", "environment", "policy"),
 	"repo-policy-check":   flagSet("format", "width", "environment", "policy", "repo-policy"),
+	"jsonprobe-check":     flagSet("format", "width", "environment", "policy"),
 	"tofu-check":          flagSet("format", "width", "environment", "policy"),
 	"ansible-check":       flagSet("format", "width", "environment", "policy"),
 	"cloud-context-check": flagSet("format", "width", "environment", "policy"),
