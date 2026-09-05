@@ -20,6 +20,7 @@ This document deliberately separates executable evidence from integration assump
 - Default redaction for configuration diffs, mutation previews, and narrated errors.
 - Configuration precedence, credential redaction, mode-`0600` enforcement, and three-slot AI routing.
 - Explicit, non-configurable AI activation; bounded/redacted inputs; mocked OpenAI, Anthropic, and OpenRouter request/response handling.
+- Read-only HCL and Ansible decomposition with dependency ordering, single-step inspection, and fail-closed unresolved reporting.
 
 ## Requires validation in each workplace
 
@@ -36,6 +37,7 @@ This document deliberately separates executable evidence from integration assump
 - Review-session storage location, retention, ticket linkage, and acknowledgement language.
 - Whether plaintext mode-`0600` API-key storage is allowed or environment/secret-manager resolution is required.
 - Approved AI models, provider endpoints, billing limits, retention terms, failover data sharing, and the effectiveness of redaction against representative repositories.
+- Generated AWS and AliCloud commands against the exact CLI versions, regions, resource types, naming rules, and organizational controls used at work.
 
 ## Blocked integration
 

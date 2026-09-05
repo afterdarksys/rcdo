@@ -23,6 +23,7 @@ Blind and low-vision infrastructure operators using screen readers, large print,
 15. Primary, backup, and tertiary AI routing is explicit and locally inspectable without a network request.
 16. Remote AI assistance requires `--ai` on every invocation; configuration cannot enable it implicitly.
 17. AI input is bounded and redacted before transmission, and AI-proposed fixes never write files.
+18. IaC decomposition never executes generated cloud commands and reports unresolved semantics as `INCOMPLETE`.
 
 ## Commands
 
@@ -37,6 +38,7 @@ Blind and low-vision infrastructure operators using screen readers, large print,
 - `error-explain`: narrate common operational failures with redacted evidence and next actions.
 - `config`: manage user defaults, provider order, and protected API-key storage.
 - `ai-assist`: explicitly request model-backed explanation, debugging, or a proposed fix for configuration or a repository snapshot.
+- `decompose` and the `hcl2aws`, `hcl2ali`, `ansible2aws`, and `ansible2ali` aliases: produce dependency-ordered manual cloud CLI runbooks.
 - `git-danger-check`: detect dangerous operational commands.
 - `git-isimportant-check`: identify changes to configured critical paths.
 - `git-update-json`: preview or atomically apply deep JSON updates.

@@ -29,6 +29,11 @@ commands:
     domain: auto
     max-input-bytes: 262144
     timeout: 60
+  decompose:
+    from: auto
+    to: aws
+    format: text
+    width: 100
   review:
     base: HEAD
     repo-policy: .rcdo/policy.yaml
@@ -88,6 +93,13 @@ Explicit options still win:
 
 ```sh
 rcdo config-explain --input service.yaml --width 100
+```
+
+Decomposition aliases inherit settings under `commands.decompose`. For example:
+
+```sh
+rcdo config set --key commands.decompose.region --value us-east-1
+rcdo config set --key commands.decompose.profile --value work-readwrite
 ```
 
 ## AI provider order

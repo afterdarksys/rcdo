@@ -121,6 +121,33 @@ collects supported configuration files while skipping dependency, VCS, build,
 and common secret paths. AI fixes are suggestions only and never write files.
 See `docs/configuration.md` for the provider and data-handling details.
 
+### `decompose` / `hcl2aws` / `hcl2ali` / `ansible2aws` / `ansible2ali`
+
+Turn declarative infrastructure into a dependency-ordered, read-only manual
+runbook. Each step contains a CLI command example, request JSON, the response
+field to capture, a verification command, and a rollback command.
+
+```sh
+rcdo hcl2aws --input main.tf
+rcdo hcl2ali --input alicloud.tf --region cn-hangzhou --profile work
+rcdo ansible2aws --input playbook.yml
+rcdo ansible2ali --input playbook.yml --region cn-hangzhou
+
+# Generic form and one-step inspection.
+rcdo decompose --from hcl --to aws --input main.tf
+rcdo hcl2aws --input main.tf --step 2
+```
+
+The beta maps common VPC, subnet/VSwitch, security-group, compute-instance,
+AWS object-storage bucket, and IAM/RAM role resources. Literal values are carried
+into the examples and direct resource ID references become captured shell
+variables. Modules, data sources, dynamic expressions, nested blocks, deletion
+tasks, and unsupported resources are reported as `INCOMPLETE` for manual
+resolution. No generated cloud command is executed. See
+`docs/iac-decomposition.md` for the support matrix and beta workflow.
+For a local, non-mutating walkthrough suitable for a first demonstration, see
+`docs/beta-demo.md`.
+
 ### `review` / `git-review`
 
 Run one accessible review over a Git revision range or the current working tree.

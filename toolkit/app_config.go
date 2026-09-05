@@ -43,6 +43,11 @@ type credentialStore struct {
 
 var configurableFlags = map[string]map[string]bool{
 	"ai-assist":           flagSet("action", "target", "domain", "max-input-bytes", "timeout"),
+	"decompose":           flagSet("format", "from", "to", "step", "width", "region", "profile"),
+	"hcl2aws":             flagSet("format", "step", "width", "region", "profile"),
+	"hcl2ali":             flagSet("format", "step", "width", "region", "profile"),
+	"ansible2aws":         flagSet("format", "step", "width", "region", "profile"),
+	"ansible2ali":         flagSet("format", "step", "width", "region", "profile"),
 	"review":              flagSet("format", "environment", "policy", "repo-policy", "base"),
 	"git-review":          flagSet("format", "environment", "policy", "repo-policy", "base"),
 	"config-explain":      flagSet("format", "syntax", "width", "values"),
@@ -72,6 +77,7 @@ func defaultAppConfig() appConfig {
 		Defaults:        map[string]any{"format": "text", "environment": "unknown", "width": 100},
 		Commands: map[string]map[string]any{
 			"ai-assist":      {"action": "explain", "target": "config", "domain": "auto", "max-input-bytes": 262144, "timeout": 60},
+			"decompose":      {"from": "auto", "to": "aws", "format": "text", "width": 100},
 			"review":         {"base": "HEAD", "repo-policy": ".rcdo/policy.yaml"},
 			"config-explain": {"syntax": "auto", "values": true},
 			"config-diff":    {"syntax": "auto", "values": true},
@@ -154,6 +160,13 @@ func applyConfiguredDefaults(command string, args []string, explicitPath string)
 	values := map[string]any{}
 	for key, value := range config.Defaults {
 		values[normalizeConfigFlag(key)] = value
+	}
+	if oneOf(command, "hcl2aws", "hcl2ali", "ansible2aws", "ansible2ali") {
+		if commandValues := config.Commands["decompose"]; commandValues != nil {
+			for key, value := range commandValues {
+				values[normalizeConfigFlag(key)] = value
+			}
+		}
 	}
 	if commandValues := config.Commands[command]; commandValues != nil {
 		for key, value := range commandValues {

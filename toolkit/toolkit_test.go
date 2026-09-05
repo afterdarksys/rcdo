@@ -18,7 +18,7 @@ func execute(command string, args []string, input string) (int, string, string) 
 func TestRCDOPrimaryCommandAndLegacyName(t *testing.T) {
 	for _, command := range []string{"rcdo", "git-tools"} {
 		code, stdout, stderr := execute(command, []string{"version"}, "")
-		if code != 0 || stderr != "" || strings.TrimSpace(stdout) != "rcdo 1.2.0" {
+		if code != 0 || stderr != "" || strings.TrimSpace(stdout) != "rcdo 1.3.0-beta.1" {
 			t.Fatalf("%s code=%d stdout=%q stderr=%q", command, code, stdout, stderr)
 		}
 	}
