@@ -8,6 +8,32 @@ The intended community includes blind and low-vision DevOps engineers using scre
 
 > Status: work-ready beta core. Every documented command builds and runs, with live read-only collectors for installed CLIs. Each employer must validate its credentials, schemas, policies, and deployment-kit adapter before production use. The checks are conservative guardrails, not proof that a deployment is safe.
 
+## Accessible operations project
+
+The [project plan](docs/accessible-operations/PROJECT_PLAN.md) covers all eight
+workstreams for accessible senior DevOps operations. The first implementation
+adds named AWS/AliCloud context checks, bounded Docker event review, persistent
+reading navigation, notes, bookmarks, and evidence-linked handoffs.
+
+```sh
+rcdo context --input context.json --expect work-aws.yaml --width 72
+rcdo watch --input events.json --environment staging --width 72
+rcdo review-session resume --session incident.json --width 72
+rcdo review-session bookmark --session incident.json --name networking
+rcdo review-session note --session incident.json --note "Check target registration."
+rcdo handoff --session incident.json --width 72
+```
+
+`context` compares a Missing Utils contextsnap artifact with named JSON/YAML
+expectations; it does not switch the shell's active profile. `watch` reviews a
+finite eventwhy artifact; continuous live monitoring remains future work.
+Navigation never acknowledges findings. Stale historical reading stays available
+with exit 30, and handoffs preserve unresolved blockers and label operator notes.
+
+Run the [credential-free demo](docs/accessible-operations/DEMO.md) from the sibling
+Missing Utils checkout. See [status and validation gaps](docs/accessible-operations/STATUS.md)
+before using live workplace adapters. These features do not require AI credentials.
+
 ## Current foundation
 
 The Go package in `finding/` gives every future checker one output contract:

@@ -24,7 +24,7 @@ const Version = "rcdo 1.3.0-beta.1"
 var commandNames = []string{
 	"a11y-output-check", "ai-assist", "ansible-check", "ansible2ali", "ansible2aws", "cloud-context-check", "config", "config-diff", "config-explain", "config-remove", "config-set", "decompose", "deploy-review", "diff-walk", "error-explain", "evidence-pack", "gha-tool",
 	"git-danger-check", "git-isimportant-check", "git-update-json", "hcl2ali", "hcl2aws",
-	"jsonprobe-check", "ops-policy-check", "pr-manager", "repo-policy-check", "review", "review-brief", "review-change", "review-session", "runbook-check", "spacelift-check", "tofu-check",
+	"context", "handoff", "watch", "jsonprobe-check", "ops-policy-check", "pr-manager", "repo-policy-check", "review", "review-brief", "review-change", "review-session", "runbook-check", "spacelift-check", "tofu-check",
 }
 
 func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
@@ -55,6 +55,12 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "context":
+		err = runContext(args, stdin, stdout, stderr)
+	case "watch":
+		err = runWatch(args, stdin, stdout, stderr)
+	case "handoff":
+		err = runSessionNavigation("handoff", args, stdout, stderr)
 	case "config":
 		err = runAppConfig(args, stdin, stdout, stderr)
 	case "ai-assist":

@@ -26,6 +26,12 @@ type reviewInput struct {
 }
 type reviewSession struct {
 	SchemaVersion string                           `json:"schema_version"`
+	Cursor        string                           `json:"cursor,omitempty"`
+	Bookmarks     map[string]string                `json:"bookmarks,omitempty"`
+	Notes         []sessionNote                    `json:"notes,omitempty"`
+	Owner         string                           `json:"owner,omitempty"`
+	Impact        string                           `json:"impact,omitempty"`
+	NextAction    string                           `json:"next_action,omitempty"`
 	ChangeID      string                           `json:"change_id"`
 	Commit        string                           `json:"commit"`
 	Repository    string                           `json:"repository,omitempty"`
@@ -50,12 +56,16 @@ func (v *sessionPaths) Set(s string) error {
 
 func runReviewSession(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" {
-		fmt.Fprintln(stdout, "review-session: resumable finding review\nUsage: review-session COMMAND [options]\nCommands:\n  start\n  status\n  next\n  acknowledge (alias: ack)\nAcknowledgement records reading; it does not resolve findings or authorize deployment.")
+		fmt.Fprintln(stdout, "review-session: resumable finding review\nUsage: review-session COMMAND [options]\nCommands:\n  start\n  status\n  next\n  acknowledge (alias: ack)\n  resume, repeat, back, forward\n  bookmark, goto, note, action\nAcknowledgement records reading; it does not resolve findings or authorize deployment.")
 		return nil
 	}
 	mode, args := args[0], args[1:]
+	if oneOf(mode, "resume", "repeat", "back", "forward", "bookmark", "goto", "note", "action") {
+		return runSessionNavigation(mode, args, stdout, stderr)
+	}
 	var sessionPath, reportPath, changeID, commit, repo, findingID, note string
 	var artifacts sessionPaths
+	var owner, impact, nextAction string
 	var width int
 	var maxAge time.Duration
 	fs := flag.NewFlagSet("review-session "+mode, flag.ContinueOnError)
@@ -63,6 +73,9 @@ func runReviewSession(args []string, stdout, stderr io.Writer) error {
 	fs.StringVar(&sessionPath, "session", ".rcdo/review-session.json", "review session file")
 	fs.IntVar(&width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
 	if mode == "start" {
+		fs.StringVar(&owner, "owner", "", "owner label for handoffs")
+		fs.StringVar(&impact, "impact", "", "operator-supplied impact statement")
+		fs.StringVar(&nextAction, "next-action", "", "operator-supplied next action")
 		fs.DurationVar(&maxAge, "max-age", 24*time.Hour, "session lifetime; positive duration")
 		fs.StringVar(&reportPath, "report", "", "versioned finding report JSON")
 		fs.StringVar(&changeID, "change-id", "", "ticket or change identifier")
@@ -114,7 +127,7 @@ func runReviewSession(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
-		session := reviewSession{SchemaVersion: "2", ChangeID: changeID, Commit: commit, CreatedAt: time.Now().UTC().Format(time.RFC3339), ExpiresAt: time.Now().UTC().Add(maxAge).Format(time.RFC3339Nano), Report: report, ReportInput: input, Artifacts: []reviewInput{}, Acknowledged: map[string]reviewAcknowledgement{}}
+		session := reviewSession{SchemaVersion: "2", ChangeID: changeID, Commit: commit, CreatedAt: time.Now().UTC().Format(time.RFC3339), ExpiresAt: time.Now().UTC().Add(maxAge).Format(time.RFC3339Nano), Owner: owner, Impact: impact, NextAction: nextAction, Report: report, ReportInput: input, Artifacts: []reviewInput{}, Acknowledged: map[string]reviewAcknowledgement{}}
 		if repo != "" {
 			repo, err = filepath.Abs(repo)
 			if err != nil {
@@ -194,6 +207,10 @@ func runReviewSession(args []string, stdout, stderr io.Writer) error {
 		if mode == "next" {
 			for _, item := range orderedSessionFindings(session.Report.Findings) {
 				if _, ok := session.Acknowledged[item.ID]; !ok {
+					session.Cursor = item.ID
+					if err := writeReviewSession(sessionPath, session); err != nil {
+						return err
+					}
 					renderSessionFinding(&output, item)
 					return reportError{status: session.Report.Status()}
 				}

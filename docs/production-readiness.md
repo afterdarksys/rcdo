@@ -65,3 +65,12 @@ Until that adapter exists, represent deployment-kit checks as a finding JSON rep
 6. Test with the actual screen reader, magnification, terminal, font size, and shell used by the operator.
 7. Have an infrastructure owner and the blind or low-vision operator approve the output vocabulary and review order.
 8. Record tool versions and artifact hashes with `evidence-pack`.
+
+## Accessible operations release
+
+The operations project adds context snapshots, review navigation and handoffs,
+and bounded Docker event interpretation. Acceptance is tracked in
+[accessible-operations/STATUS.md](accessible-operations/STATUS.md). Live cloud
+identity and Docker collectors are tested with mocked runners; actual profiles,
+Docker endpoints and assistive technologies require a workplace pilot. No live
+production readiness claim follows from local fixtures.
