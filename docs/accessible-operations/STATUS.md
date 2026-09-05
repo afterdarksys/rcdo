@@ -33,7 +33,7 @@ Reading completion does not establish remediation or deployment approval.
   notes/bookmarks, historical reading, deterministic handoffs, unchanged blockers,
   event display limits and 40-column wrapping.
 - Static analysis: Go vet for both repositories.
-- Capability matrix: generator validates all 47 Missing Utils command directories.
+- Capability matrix: generator validates all 48 Missing Utils command directories.
 - Built-binary demo: both cloud fixtures, wrong accounts, grouped Docker events,
   interrupted review, unresolved acknowledged findings, changed evidence, and
   72-column output checks. Run scripts/demo-accessible-operations.py to reproduce
@@ -62,3 +62,18 @@ SPC: live run navigation, supersession and actual platform policy/approval state
 HND: executed-change records, event references, signed provenance and optional AI wording.
 
 These remain planned work under PROJECT_PLAN.md, not production capabilities.
+
+## Roadmap milestone: execution and configuration
+
+Implemented core: per-stage local receipts and RCDO review; persistent structural
+configuration navigation; fingerprint-required writes and scalar expectations.
+Acceptance fixtures cover early pipeline failure, timeouts, missing executables,
+intent persistence failure, stale edits, missing navigation paths and ambiguous
+JSON/YAML. See DEMO.md for the cross-tool scenario.
+
+Remaining: remote durable receipts, reference traversal, identity-aware list
+selection, full terminal compatibility and real assistive-technology pilot.
+The full roadmap remains in progress; no workplace acceptance is claimed.
+
+Validation: full Go test suites and go vet passed in both projects; the offline
+cross-tool demo passed. Missing Utils receipt and RCDO toolkit race tests passed.

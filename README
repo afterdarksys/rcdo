@@ -206,13 +206,14 @@ disabled encryption or deletion protection, and privileged workloads.
 
 `config-set` and `config-remove` modify JSON, YAML, TOML, and HCL by complete path.
 They show a redacted semantic preview by default and write atomically only with
-`--write`. HCL changes use its syntax-aware writer and address attributes inside
+`--write --expect-sha256 REVIEWED_SHA256`, using the hash from the preview.
+Optional `--expect-value` asserts the existing scalar value. HCL changes use its syntax-aware writer and address attributes inside
 existing block paths; they do not invent ambiguous blocks or edit inside an
 attribute expression.
 
 ```sh
 rcdo config-set --input service.yaml --path service.replicas --value 4
-rcdo config-set --input service.yaml --path service.image --value api:v2 --string --write
+rcdo config-set --input service.yaml --path service.image --value api:v2 --string --write --expect-sha256 REVIEWED_SHA256
 rcdo config-remove --input service.json --path obsolete_setting
 ```
 
@@ -493,3 +494,20 @@ Live collectors are opt-in. See `docs/workflows.md` for GitHub CLI, OpenTofu, Sp
 ## Contributing ideas
 
 Useful contributions include anonymized incident patterns, dangerous-change rules, accessible CLI testing, fixture repositories, cloud-specific policy checks, and adapters that do not expose credentials or proprietary deployment details.
+
+Expanded roadmap: [ROADMAP.md](ROADMAP.md); guarded writes require the SHA-256 from the preview.
+
+Execution receipts and configuration navigation
+-----------------------------------------------
+
+`receipt-review --input RECEIPT.json` reads Missing Utils runreceipt evidence and
+reports each pipeline stage. Exit zero describes local process completion only;
+remote outcomes require independent verification. Incomplete receipts never
+justify automatic retries.
+
+`config-walk start --input FILE --state navigation.json` starts persistent
+structural navigation. Use `show`, `parent`, `child`, `next`, `previous`, `find`,
+`goto`, and `bookmark` with the same state file. Text output is linear and wrapped;
+`--format json` retains exact paths. Changed source versions are announced and
+missing paths require explicit relocation. See docs/accessible-operations/DEMO.md
+for the offline cross-tool demonstration and current limitations.

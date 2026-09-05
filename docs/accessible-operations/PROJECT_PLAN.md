@@ -174,3 +174,5 @@ provenance verification, documentation and independent maintainability.
 Each release must update STATUS.md with executable evidence, implemented scope,
 remaining work, and environmental validation gaps. No calendar estimates until
 actual workplace adapters and acceptance setup are known.
+
+The expanded [shared roadmap](../../ROADMAP.md) includes all nine additional workstreams and delivery order.

@@ -2,7 +2,9 @@ package toolkit
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -372,7 +374,7 @@ func TestConfigSetPreviewsThenWritesAtomically(t *testing.T) {
 	if code != 0 || stderr != "" || !strings.Contains(stdout, "Before value: 2") || !strings.Contains(stdout, "After value: 4") || !strings.Contains(stdout, "File written: no") || !strings.Contains(string(current), `"replicas":2`) {
 		t.Fatalf("preview code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)
 	}
-	code, stdout, stderr = execute("config-set", []string{"--input", path, "--path", "service.password", "--value", "new", "--string", "--write"}, "")
+	code, stdout, stderr = execute("config-set", []string{"--input", path, "--path", "service.password", "--value", "new", "--string", "--write", "--expect-sha256", fmt.Sprintf("%x", sha256.Sum256(current))}, "")
 	current, _ = os.ReadFile(path)
 	info, _ := os.Stat(path)
 	if code != 0 || stderr != "" || !strings.Contains(stdout, "UPDATED:") || strings.Contains(stdout, "new") || !strings.Contains(string(current), `"new"`) || info.Mode().Perm() != 0o640 {
@@ -403,7 +405,7 @@ func TestConfigSetMutatesHCLAttributeWithPreview(t *testing.T) {
 	if code != 0 || stderr != "" || !strings.Contains(stdout, `Before value: "t3.micro"`) || !strings.Contains(stdout, `After value: "t3.large"`) || string(current) != input {
 		t.Fatalf("preview code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)
 	}
-	code, stdout, stderr = execute("config-set", append(args, "--write"), "")
+	code, stdout, stderr = execute("config-set", append(args, "--write", "--expect-sha256", fmt.Sprintf("%x", sha256.Sum256(current))), "")
 	current, _ = os.ReadFile(path)
 	if code != 0 || stderr != "" || !strings.Contains(string(current), `instance_type = "t3.large"`) {
 		t.Fatalf("write code=%d stdout=%q current=%q stderr=%q", code, stdout, current, stderr)

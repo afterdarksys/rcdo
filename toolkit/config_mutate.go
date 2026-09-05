@@ -2,6 +2,7 @@ package toolkit
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -25,7 +26,7 @@ type configPathPart struct {
 }
 
 func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.Writer) error {
-	var input, path, syntax, rawValue string
+	var input, path, syntax, rawValue, expectedHash, expectedValue string
 	var write, stringValue, showSecrets bool
 	fs := flag.NewFlagSet("config-"+mode, flag.ContinueOnError)
 	fs.SetOutput(stderr)
@@ -36,6 +37,8 @@ func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.
 		fs.StringVar(&rawValue, "value", "", "new value as JSON; use --string for literal text")
 		fs.BoolVar(&stringValue, "string", false, "treat --value as a literal string")
 	}
+	fs.StringVar(&expectedValue, "expect-value", "", "assert the existing scalar value as JSON")
+	fs.StringVar(&expectedHash, "expect-sha256", "", "source SHA-256 from the reviewed preview; required for --write")
 	fs.BoolVar(&write, "write", false, "atomically replace the input file; default is preview")
 	fs.BoolVar(&showSecrets, "show-secrets", false, "show sensitive values in the preview")
 	setAccessibleUsage(fs, "config-"+mode, stderr)
@@ -51,12 +54,38 @@ func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.
 	if mode == "set" && rawValue == "" && !stringValue {
 		return fmt.Errorf("--value is required")
 	}
-	data, err := os.ReadFile(input)
+	data, err := readConfigSource(input)
 	if err != nil {
 		return fmt.Errorf("read input %q: %w", input, err)
 	}
+	digest := fmt.Sprintf("%x", sha256.Sum256(data))
+	check := func() error {
+		info, err := os.Lstat(input)
+		if err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("write requires a regular file, not a symlink")
+		}
+		current, err := readConfigSource(input)
+		if err != nil {
+			return err
+		}
+		if expectedHash == "" || fmt.Sprintf("%x", sha256.Sum256(current)) != expectedHash {
+			return fmt.Errorf("source version differs or --expect-sha256 is missing; preview again before writing")
+		}
+		return nil
+	}
+	if expectedHash != "" && expectedHash != digest {
+		return fmt.Errorf("source version differs; preview again")
+	}
+	if write {
+		if err := check(); err != nil {
+			return err
+		}
+	}
 	resolved, err := detectConfigSyntax(syntax, input, data)
 	if err != nil {
+		return err
+	}
+	if err := validateConfigDocument(resolved, data); err != nil {
 		return err
 	}
 	parts, err := parseConfigPath(path)
@@ -65,6 +94,54 @@ func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.
 	}
 	if len(parts) == 0 {
 		return fmt.Errorf("the document root cannot be changed")
+	}
+	if expectedValue != "" {
+		var value any
+		decoder := json.NewDecoder(strings.NewReader(expectedValue))
+		decoder.UseNumber()
+		if decoder.Decode(&value) != nil {
+			return fmt.Errorf("invalid --expect-value JSON")
+		}
+		if decoder.Decode(new(any)) != io.EOF {
+			return fmt.Errorf("expected value must be one JSON scalar")
+		}
+		switch value.(type) {
+		case map[string]any, []any:
+			return fmt.Errorf("expected value must be a scalar")
+		}
+		canonical := "$"
+		for _, part := range parts {
+			if part.isIndex {
+				canonical += fmt.Sprintf("[%d]", part.index)
+			} else {
+				canonical = appendConfigPath(canonical, part.key)
+			}
+		}
+		entries, err := explainConfig(resolved, input, data, true, true)
+		if err != nil {
+			return err
+		}
+		encoded := []byte(renderConfigValue(canonical, value, true))
+		matched := false
+		for _, entry := range entries {
+			if entry.Path == canonical && entry.Value == string(encoded) {
+				matched = true
+			}
+		}
+		if !matched {
+			return fmt.Errorf("expected value mismatch or unsupported scalar representation; no file written")
+		}
+	}
+	before, err := explainConfig(resolved, input, data, true, true)
+	if err != nil {
+		return err
+	}
+	seen := map[string]bool{}
+	for _, entry := range before {
+		if seen[entry.Path] {
+			return fmt.Errorf("ambiguous duplicate configuration path")
+		}
+		seen[entry.Path] = true
 	}
 	var result []byte
 	if resolved == "hcl" {
@@ -96,6 +173,9 @@ func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.
 	if err != nil {
 		return err
 	}
+	if err := validateConfigDocument(resolved, result); err != nil {
+		return err
+	}
 	afterEntries, err := explainConfig(resolved, input, result, true, true)
 	if err != nil {
 		return err
@@ -114,12 +194,13 @@ func runConfigMutate(mode string, args []string, _ io.Reader, stdout, stderr io.
 	}
 	if !write {
 		fmt.Fprintln(stdout, "MUTATION PREVIEW")
+		fmt.Fprintf(stdout, "Source SHA-256: %s\n", digest)
 		renderConfigDiffText(stdout, configDiff{SchemaVersion: "1", BeforeFormat: resolved, AfterFormat: resolved, Changed: true, Summary: summary, Changes: changes}, 100)
 		fmt.Fprintln(stdout, "File written: no")
-		fmt.Fprintln(stdout, "Rerun with --write after reviewing this semantic change.")
+		fmt.Fprintln(stdout, "Rerun with --write --expect-sha256 HASH using the Source SHA-256 above.")
 		return nil
 	}
-	return atomicReplace(input, result, stdout)
+	return atomicReplaceChecked(input, result, stdout, check)
 }
 
 func mutateHCL(data []byte, name string, parts []configPathPart, mode, rawValue string, stringValue bool) ([]byte, error) {
@@ -265,6 +346,20 @@ func parseConfigPath(path string) ([]configPathPart, error) {
 			continue
 		}
 		if path[0] == '[' {
+			if strings.HasPrefix(path, `["`) {
+				decoder := json.NewDecoder(strings.NewReader(path[1:]))
+				var key string
+				if decoder.Decode(&key) != nil {
+					return nil, fmt.Errorf("invalid quoted path key")
+				}
+				end := 1 + int(decoder.InputOffset())
+				if end >= len(path) || path[end] != ']' {
+					return nil, fmt.Errorf("invalid quoted path boundary")
+				}
+				parts = append(parts, configPathPart{key: key})
+				path = path[end+1:]
+				continue
+			}
 			end := strings.IndexByte(path, ']')
 			if end < 0 {
 				return nil, fmt.Errorf("invalid path: missing ]")

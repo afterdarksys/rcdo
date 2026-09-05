@@ -183,6 +183,9 @@ func mergeObjects(base, patch map[string]any) map[string]any {
 }
 
 func atomicReplace(path string, data []byte, stdout io.Writer) error {
+	return atomicReplaceChecked(path, data, stdout, nil)
+}
+func atomicReplaceChecked(path string, data []byte, stdout io.Writer, check func() error) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("stat input %q: %w", path, err)
@@ -207,6 +210,11 @@ func atomicReplace(path string, data []byte, stdout io.Writer) error {
 	}
 	if err := temporary.Close(); err != nil {
 		return fmt.Errorf("close temporary file: %w", err)
+	}
+	if check != nil {
+		if err := check(); err != nil {
+			return err
+		}
 	}
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return fmt.Errorf("replace input %q: %w", path, err)

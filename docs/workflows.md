@@ -132,14 +132,16 @@ rcdo review-session next
 
 ## Safe configuration mutation
 
-Preview first, then repeat the exact command with `--write`:
+Preview first, then repeat the exact command with `--write --expect-sha256 REVIEWED_SHA256` using the source hash printed by the preview:
 
 ```sh
 rcdo config-set --input environments/production.yaml --path api.replicas --value 4
-rcdo config-set --input environments/production.yaml --path api.replicas --value 4 --write
+rcdo config-set --input environments/production.yaml --path api.replicas --value 4 --write --expect-sha256 REVIEWED_SHA256
 ```
 
 JSON values support booleans, numbers, null, arrays, and objects. Use `--string`
 for literal text. YAML and TOML documents are re-encoded; HCL is rewritten with
 its syntax-aware formatter. Use `config-diff` to review the semantic result and
 Git to inspect presentation changes.
+
+Expanded roadmap: [ROADMAP.md](../ROADMAP.md); guarded writes require the SHA-256 from the preview.

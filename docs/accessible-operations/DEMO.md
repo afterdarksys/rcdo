@@ -145,3 +145,43 @@ workflow. These are product usability measures, not measures of visual ability.
 - [AWS caller identity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html)
 - [AliCloud STS role identity](https://www.alibabacloud.com/help/en/ram/user-guide/assume-a-ram-role)
 - [Docker event output and limited history](https://docs.docker.com/reference/cli/docker/system/events/)
+
+## Execution and configuration milestone
+
+See [the shared roadmap](../../ROADMAP.md) for all 17 workstreams. This milestone
+adds `runreceipt` (Missing Utils), `receipt-review` and `config-walk` (RCDO), and
+reviewed-source guards to `config-set` / `config-remove`.
+
+```sh
+runreceipt --label "version check" --execute --receipt version.json -- terraform version
+rcdo receipt-review --input version.json
+rcdo config-walk start --input settings.yaml --state navigation.json
+rcdo config-walk child --state navigation.json
+rcdo config-walk bookmark --name service --state navigation.json
+rcdo config-walk show --state navigation.json
+rcdo config-set --input settings.yaml --path service.port --value 8080
+# Copy the Source SHA-256 from the preview into REVIEWED_SHA256 below.
+rcdo config-set --input settings.yaml --path service.port --value 8080 --write --expect-sha256 REVIEWED_SHA256 --expect-value 80
+```
+
+Writes now require `--expect-sha256`. `--expect-value` accepts an existing scalar;
+HCL expressions are not evaluated. Syntax validation is not provider validation.
+The hash is checked again immediately before replacement, but this is optimistic
+concurrency protection, not isolation from another writer racing the rename.
+JSON/YAML/TOML rewrites may normalize formatting and remove comments.
+
+Navigation supports parent, child, next, previous, find, goto and bookmark.
+Use `--format json` for exact paths; text is wrapped and secret-aware. Bookmarks
+identify paths, not list item identities. Removed paths produce incomplete status
+and require explicit `goto`. Navigation state contains paths, not source values.
+
+Receipts omit command arguments and output, but retain executable, label, host,
+directory and argument fingerprints. Fingerprints do not encrypt guessable secrets.
+Use private storage. Command output itself passes through unchanged. Timeouts stop
+direct local children; descendant and remote work may remain. Never infer that a
+retry is safe from a missing final receipt. No retry is automatic.
+
+From the Missing Utils checkout, after building both tools:
+`python3 scripts/demo-roadmap.py` runs offline acceptance scenarios without cloud
+credentials or production actions. Assistive-technology pilot acceptance remains
+open; automated tests do not certify screen-reader usability.
