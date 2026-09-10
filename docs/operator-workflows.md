@@ -57,3 +57,28 @@ source hash, cursor and bookmarks. Any source byte change blocks further navigat
 with 30; start a new file to review the new version. Limits: 16 MiB source, 50000
 nodes, depth 64, 1000 bookmarks, and 4096-byte scalar display limit. Output is
 bounded with `--limit`; snapshot values do not establish current service health.
+
+## Network investigation
+
+```sh
+rcdo network-check --url https://service.example/health --timeout 10s --expect-status 200
+```
+
+This command contacts the explicit endpoint. It resolves DNS, attempts at most eight
+addresses, connects TCP, verifies TLS chain/hostname for HTTPS, then issues HTTP HEAD
+on that same socket. Default total deadline is 10 seconds (maximum 60). A failure
+stops dependent layers, which remain visibly unattempted. Earlier failed addresses
+are not hidden by a later successful connection; other backends are not certified.
+
+No redirects or environment proxies are followed. URLs with userinfo, query strings,
+fragments or control characters are rejected. No authorization, cookies, custom
+headers or request bodies are sent. Response headers/bodies and raw diagnostic text
+are withheld; response headers are limited to 64 KiB. A HEAD request can still reach
+server handlers; this is an explicit diagnostic, not an offline parser.
+
+TLS uses the platform trust store and hostname verification; there is no insecure
+bypass. `--min-valid-for` defaults to 24h for a leaf-certificate expiry warning.
+HTTP status defaults to expected 200 and is configurable. HTTP success does not
+prove application dependencies work. Tests use local HTTP/TLS servers, controlled
+DNS failure and a silent-server deadline check. The implementation uses Go's
+[HTTP transport](https://pkg.go.dev/net/http) and [TLS verification](https://pkg.go.dev/crypto/tls).

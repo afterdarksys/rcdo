@@ -216,5 +216,5 @@ Each section has its own implementation commit and documented acceptance limits.
 
 - [x] ANS-READ: opt-in Ansible receipts and host/task rollout reading.
 - [x] STATE-NAV: redacted Terraform/OpenTofu state navigation and bookmarks.
-- [ ] NETWORK: bounded DNS, TCP, TLS and HTTP investigation.
+- [x] NETWORK: bounded DNS, TCP, TLS and HTTP investigation.
 - [ ] TASKS: explicit registry and resume for incidents, reviews and runbooks.
