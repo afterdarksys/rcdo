@@ -43,6 +43,7 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"audit":               flagSet("format", "width", "limit"),
 	"log-read":            flagSet("format", "width", "syntax", "context", "max-groups", "state"),
 	"markdown-view":       flagSet("format", "width", "toc", "state"),
 	"to-markdown":         flagSet("from", "table-mode", "delimiter", "header", "sheet"),

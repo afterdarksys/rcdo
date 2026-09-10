@@ -23,6 +23,17 @@ type auditConfig struct {
 	MaxOutputBytes int    `json:"max_output_bytes" yaml:"max_output_bytes"`
 }
 
+func auditConfigPath(configPath string, c auditConfig) string {
+	path := c.File
+	if path == "" {
+		path = "audit.jsonl"
+	}
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(filepath.Dir(configPath), path)
+	}
+	return path
+}
+
 func validateAuditConfig(c auditConfig) error {
 	if c.Output != "" && !oneOf(c.Output, "redacted", "none") {
 		return fmt.Errorf("audit.output must be redacted or none")
@@ -119,6 +130,10 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		return 2
 	}
 	// Avoid appending audit records to a config, credential, evidence or state file.
+	if separateArtifact(path, boundArtifact{Path: c.File}) != nil || separateArtifact(credentialsPath(path, config), boundArtifact{Path: c.File}) != nil {
+		fmt.Fprintln(stderr, "error: audit file aliases configuration or credentials")
+		return 2
+	}
 	candidates := append([]string{path, credentialsPath(path, config)}, commandArgs...)
 	for _, values := range config.Commands {
 		for key, value := range values {
@@ -135,7 +150,7 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 				continue
 			}
 		}
-		if candidate != "" && separateArtifact(candidate, boundArtifact{Path: c.File}) != nil {
+		if name != "audit" && candidate != "" && separateArtifact(candidate, boundArtifact{Path: c.File}) != nil {
 			fmt.Fprintln(stderr, "error: audit file must be separate from command files")
 			return 2
 		}
@@ -306,8 +321,17 @@ func auditArguments(args []string) []string {
 // A short-lived directory lock coordinates appenders across processes without
 // serializing command execution. Never reclaim another process's lock implicitly.
 func appendAudit(path string, r auditRecord) error {
+	unlock, err := lockAudit(path)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	return appendAuditLocked(path, r)
+}
+
+func lockAudit(path string) (func(), error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		return fmt.Errorf("cannot create audit directory")
+		return nil, fmt.Errorf("cannot create audit directory")
 	}
 	lock := path + ".lock"
 	deadline := time.Now().Add(2 * time.Second)
@@ -317,11 +341,14 @@ func appendAudit(path string, r auditRecord) error {
 			break
 		}
 		if !os.IsExist(err) || time.Now().After(deadline) {
-			return fmt.Errorf("audit append lock unavailable")
+			return nil, fmt.Errorf("audit append lock unavailable")
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	defer os.Remove(lock)
+	return func() { os.Remove(lock) }, nil
+}
+
+func appendAuditLocked(path string, r auditRecord) error {
 	info, err := os.Lstat(path)
 	var f *os.File
 	if os.IsNotExist(err) {
