@@ -182,7 +182,7 @@ Offline artifact workflows do not imply complete live collection or workplace
 assistive-technology acceptance. Those remain explicit follow-up work.
 
 - [x] LOG: bounded log investigation, search, grouping and saved navigation.
-- [ ] CTX: one cross-tool context summary with required observations and expectations.
+- [x] CTX: one cross-tool context summary with required observations and expectations.
 - [ ] REL: evidence-labelled dependency navigation and missing-coverage detection.
 - [ ] NAV: resumable incident workspace with hypotheses, evidence and next actions.
 - [ ] RUN: runbook progression with separate attempts, completion and verification.
