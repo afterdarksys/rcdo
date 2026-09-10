@@ -156,17 +156,36 @@ Live integration and assistive-technology acceptance are not asserted.
 ## collect
 
 Added explicit AWS identity and paginated EC2 inventory/attachment acquisition feeding context, fleet and resource readers. Expected account gating and identity rechecks prevent silent cross-account collection; failed pages preserve incomplete coverage.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../live-operations.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
 
 ## changes
 
 Added report and fleet snapshot comparisons with source fingerprints, persistent risk and explicit uncertainty. Finding disappearance is not recovery, missing hosts remain unknown and changed baselines cannot imply improvement.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../live-operations.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
 
 ## kube-explain
 
 Added explicit-context Kubernetes collection and replay with pod/container readiness, restart reasons, deployment convergence/deadlines and UID-correlated warning events. Missing sections and stale evidence remain incomplete; saved snapshots omit environment and message bodies.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../live-operations.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## Command builder explanations
+
+Added `command-gen --explain` and `--shell posix|powershell`: argument metadata,
+effect classification, required-input visibility and literal shell quoting.
+Enhanced cloud generation withholds runnable commands for unresolved inputs.
+Validation includes real POSIX and available PowerShell argument round trips;
+provider execution remains unperformed and compatibility is not implied.
+See ../live-operations.md for supported shells and scope.
+
+### Live operations priority batch validation
+
+- `go test ./...`: passed, including real POSIX and installed PowerShell literal
+  argument round trips. Shell tests execute only an argument-echo helper.
+- `go vet ./...` and `make build`: passed.
+- `python3 scripts/live-operations-practice.py`: 14 expected-exit checks passed
+  using synthetic AWS/kubectl adapters and the built CLI.
+- No live cloud credentials, cluster access or provider mutations were used.
+- Workplace provider compatibility and assistive-technology acceptance remain open.

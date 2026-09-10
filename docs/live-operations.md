@@ -82,3 +82,44 @@ than being attributed to a newly created pod with the same name. Restart counts 
 cumulative, not rates. Reports give numbered findings, event UID references and
 previous-log command suggestions; raw logs remain a separate explicit operation.
 Use `report-read` or `review-session` for saved report navigation.
+
+## COMMAND: command explanations and shell selection
+
+```sh
+rcdo command-gen --to tofu --input main.tf --action plan --explain
+rcdo command-gen --to spacelift --input stack.yaml --action logs --explain --shell powershell
+rcdo command-gen --to aws --input main.tf --region us-east-1 --explain --format json
+```
+
+`--explain` adds parameter/source descriptions and an explicit intended effect:
+read-only, remote-write, or local-plan-write-and-backend-lock. Execution remains
+false. Provider plugins/executable behavior is not certified by this classification.
+Cloud recipes retain required inputs, dependencies and unmapped configuration;
+any unresolved plan item withholds runnable command/argv in enhanced output and
+returns 30. An explicit region is required for enhanced cloud commands. Re-run
+with literal captured IDs after dependencies have been created and verified.
+Existing decomposition commands remain available for annotated placeholder examples.
+
+`--shell posix` covers POSIX-style shells; `--shell powershell` emits a call operator
+and literal single-quoted arguments. PowerShell support targets 7.3+ with Standard
+native argument passing, as described in Microsoft's [quoting](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_quoting_rules)
+and [native parsing](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_parsing)
+documentation. Windows PowerShell/Legacy mode and cmd.exe are not supported.
+Control/format characters are rejected; PowerShell smart quotes are rejected as
+ambiguous. JSON argv preserves literal values. The generator does not initialize,
+apply, switch contexts, resolve live IDs or run generated commands.
+
+Enhanced cloud JSON contains `recipes` and `unresolved`; ordinary Spacelift/IaC
+recipes retain their prior fields with optional explanation metadata. Cloud
+configuration limits are 16 MiB. Quote tests invoke only a local argument-echo
+helper through the real shells, never AWS, Spacelift or infrastructure engines.
+
+## Credential-free practice
+
+After `make build`, run `python3 scripts/live-operations-practice.py`. It places
+synthetic AWS/kubectl adapters only on its child processes' PATH and makes no cloud
+requests. Fourteen expected-exit checks exercise collection-to-reader compatibility,
+wrong-account refusal, missing-to-observed fleet changes, Kubernetes collection and
+replay, persistent report risk and command generation in both shells. Fixtures and
+transcripts remain in a private temporary directory. This verifies CLI integration,
+not provider compatibility or workplace accessibility acceptance.

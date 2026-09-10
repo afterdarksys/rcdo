@@ -13,23 +13,31 @@ import (
 )
 
 type commandRecipe struct {
-	SchemaVersion string   `json:"schema_version"`
-	Target        string   `json:"target"`
-	Action        string   `json:"action"`
-	SourceSHA256  string   `json:"source_sha256"`
-	Executed      bool     `json:"executed"`
-	Mutating      bool     `json:"mutating"`
-	Argv          []string `json:"argv"`
-	Command       string   `json:"command"`
-	Notes         []string `json:"notes"`
+	Shell          string             `json:"shell,omitempty"`
+	Effect         string             `json:"effect,omitempty"`
+	Parameters     []commandParameter `json:"parameters,omitempty"`
+	RequiredInputs []string           `json:"required_inputs,omitempty"`
+	SchemaVersion  string             `json:"schema_version"`
+	Target         string             `json:"target"`
+	Action         string             `json:"action"`
+	SourceSHA256   string             `json:"source_sha256"`
+	Executed       bool               `json:"executed"`
+	Mutating       bool               `json:"mutating"`
+	Argv           []string           `json:"argv"`
+	Command        string             `json:"command"`
+	Notes          []string           `json:"notes"`
 }
 
 func literalShellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'" }
 func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	var input, target, action, from, format, region, profile, directory string
 	var width, step int
+	var explain bool
+	var shell string
 	fs := flag.NewFlagSet("command-gen", flag.ContinueOnError)
 	fs.SetOutput(stderr)
+	fs.BoolVar(&explain, "explain", false, "explain parameters, required inputs and effects")
+	fs.StringVar(&shell, "shell", "posix", "posix or powershell (PowerShell 7.3+ Standard native argument passing)")
 	fs.StringVar(&input, "input", "-", "configuration file or - for stdin")
 	fs.StringVar(&target, "to", "", "spacelift, aws, alicloud, tofu or terraform")
 	fs.StringVar(&action, "action", "", "Spacelift: show, logs, changes, preview, deploy; IaC: validate, plan, fmt-check; cloud: create")
@@ -44,12 +52,18 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if fs.NArg() > 0 || width < 40 || !oneOf(format, "text", "json") {
+	if fs.NArg() > 0 || width < 40 || !oneOf(format, "text", "json") || !oneOf(shell, "posix", "powershell") {
 		return fmt.Errorf("invalid arguments, width or format")
 	}
 	if oneOf(target, "aws", "alicloud") {
 		if action != "" && action != "create" {
 			return fmt.Errorf("cloud generation supports --action create; verification and rollback examples are included")
+		}
+		if directory != "" {
+			return fmt.Errorf("directory is only valid for IaC commands")
+		}
+		if explain || shell != "posix" {
+			return runExplainedCloud(input, target, from, format, region, profile, shell, step, width, stdin, stdout)
 		}
 		return runDecompose("decompose", []string{"--input", input, "--from", from, "--to", target, "--format", format, "--region", region, "--profile", profile, "--width", fmt.Sprint(width), "--step", fmt.Sprint(step)}, stdin, stdout, stderr)
 	}
@@ -122,7 +136,7 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 		default:
 			return fmt.Errorf("Spacelift command configuration must be JSON, YAML or HCL")
 		}
-		if config.StackID == "" {
+		if !operationLabel(config.StackID) || strings.HasPrefix(config.StackID, "-") {
 			return fmt.Errorf("stack_id is required; RCDO does not infer a live ID from a display name")
 		}
 		if action == "" {
@@ -133,7 +147,7 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 			recipe.Argv = []string{"spacectl", "stack", "show", "--id", config.StackID, "--output", "json", "--no-color"}
 			recipe.Notes = append(recipe.Notes, "Shows stack configuration; this is not an actual run snapshot.")
 		case "logs", "changes":
-			if config.RunID == "" {
+			if !operationLabel(config.RunID) || strings.HasPrefix(config.RunID, "-") {
 				return fmt.Errorf("run_id is required for %s", action)
 			}
 			recipe.Argv = []string{"spacectl", "stack", action, "--id", config.StackID, "--run", config.RunID}
@@ -186,15 +200,22 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 			return fmt.Errorf("command arguments cannot contain NUL or line breaks")
 		}
 	}
-	quoted := []string{}
-	for _, arg := range recipe.Argv {
-		quoted = append(quoted, literalShellQuote(arg))
+	recipe.Command, err = quoteCommand(recipe.Argv, shell)
+	if err != nil {
+		return err
 	}
-	recipe.Command = strings.Join(quoted, " ")
+	if explain || shell != "posix" {
+		explainRecipe(&recipe, shell)
+	}
+
 	if format == "json" {
 		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
 		return enc.Encode(recipe)
+	}
+	if explain || shell != "posix" {
+		renderExplainedRecipe(stdout, recipe, width)
+		return nil
 	}
 	fmt.Fprintln(stdout, "EXECUTION: NOT RUN")
 	writeWrapped(stdout, fmt.Sprintf("Target: %s. Action: %s. Side effects if executed: %t.", target, action, recipe.Mutating), width)

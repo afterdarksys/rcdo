@@ -31,17 +31,19 @@ type decompositionPlan struct {
 }
 
 type decompositionStep struct {
-	Number         int            `json:"number"`
-	ID             string         `json:"id"`
-	Source         string         `json:"source"`
-	Action         string         `json:"action"`
-	DependsOn      []string       `json:"depends_on"`
-	Command        string         `json:"command"`
-	RequestExample map[string]any `json:"request_example"`
-	Capture        []string       `json:"capture"`
-	Verify         string         `json:"verify"`
-	Rollback       string         `json:"rollback"`
-	Notes          []string       `json:"notes"`
+	Argv           []string           `json:"-"`
+	Parameters     []commandParameter `json:"-"`
+	Number         int                `json:"number"`
+	ID             string             `json:"id"`
+	Source         string             `json:"source"`
+	Action         string             `json:"action"`
+	DependsOn      []string           `json:"depends_on"`
+	Command        string             `json:"command"`
+	RequestExample map[string]any     `json:"request_example"`
+	Capture        []string           `json:"capture"`
+	Verify         string             `json:"verify"`
+	Rollback       string             `json:"rollback"`
+	Notes          []string           `json:"notes"`
 }
 
 type decompositionOptions struct {
@@ -530,6 +532,7 @@ func recipeStep(target, region, profile string, resource sourceResource, recipe 
 	} else {
 		commandParts = append(commandParts, "aliyun", recipe.Service, recipe.Operation)
 	}
+	step.Argv = append([]string{}, commandParts...)
 	var issues []string
 	used := map[string]bool{}
 	for _, argument := range recipe.Arguments {
@@ -550,6 +553,9 @@ func recipeStep(target, region, profile string, resource sourceResource, recipe 
 		step.RequestExample[argument.Parameter] = value
 		commandParts = append(commandParts, argument.Flag)
 		commandParts = append(commandParts, shellValues(value)...)
+		step.Argv = append(step.Argv, argument.Flag)
+		step.Argv = append(step.Argv, rawCommandValues(value)...)
+		step.Parameters = append(step.Parameters, commandParameter{Flag: argument.Flag, Source: argument.Source, Required: argument.Required, Explanation: parameterMeaning(argument.Flag)})
 		if decompositionPlaceholder(value) {
 			issues = append(issues, resource.Address+" contains a placeholder for "+argument.Source)
 		}
@@ -559,26 +565,37 @@ func recipeStep(target, region, profile string, resource sourceResource, recipe 
 			configuration := "LocationConstraint=" + region
 			step.RequestExample["CreateBucketConfiguration"] = map[string]any{"LocationConstraint": region}
 			commandParts = append(commandParts, "--create-bucket-configuration", shellQuote(configuration))
+			step.Argv = append(step.Argv, "--create-bucket-configuration", configuration)
+			step.Parameters = append(step.Parameters, commandParameter{Flag: "--create-bucket-configuration", Source: "command option", Required: true, Explanation: parameterMeaning("--create-bucket-configuration")})
 		}
 		if region != "" {
 			commandParts = append(commandParts, "--region", shellQuote(region))
+			step.Argv = append(step.Argv, "--region", region)
+			step.Parameters = append(step.Parameters, commandParameter{Flag: "--region", Source: "command option", Required: true, Explanation: parameterMeaning("--region")})
 		}
 		if profile != "" {
 			commandParts = append(commandParts, "--profile", shellQuote(profile))
+			step.Argv = append(step.Argv, "--profile", profile)
+			step.Parameters = append(step.Parameters, commandParameter{Flag: "--profile", Source: "command option", Required: true, Explanation: parameterMeaning("--profile")})
 		}
 	} else {
 		if recipe.RequiresRegion {
 			if region == "" {
 				commandParts = append(commandParts, "--RegionId", shellQuote("<required:region>"))
+				step.Argv = append(step.Argv, "--RegionId", "<required:region>")
 				step.RequestExample["RegionId"] = "<required:region>"
 				issues = append(issues, resource.Address+" requires an explicit AliCloud region")
 			} else {
 				commandParts = append(commandParts, "--RegionId", shellQuote(region))
+				step.Argv = append(step.Argv, "--RegionId", region)
+				step.Parameters = append(step.Parameters, commandParameter{Flag: "--RegionId", Source: "command option", Required: true, Explanation: parameterMeaning("--RegionId")})
 				step.RequestExample["RegionId"] = region
 			}
 		}
 		if profile != "" {
 			commandParts = append(commandParts, "--profile", shellQuote(profile))
+			step.Argv = append(step.Argv, "--profile", profile)
+			step.Parameters = append(step.Parameters, commandParameter{Flag: "--profile", Source: "command option", Required: true, Explanation: parameterMeaning("--profile")})
 		}
 	}
 	for attribute := range resource.Attributes {

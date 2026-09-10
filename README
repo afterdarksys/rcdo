@@ -589,3 +589,14 @@ rcdo report-read --input report.json --layout braille
 The practice runner retains synthetic fixtures and transcripts. Live collection
 coverage and actual assistive-technology acceptance remain explicit follow-ups in
 [ROADMAP.md](ROADMAP.md) and the [pilot worksheet](docs/accessible-operations/PILOT.md).
+
+## Live operations priorities
+
+[Live operations guide](docs/live-operations.md) covers the new `collect`, `changes`,
+`kube-explain`, and enhanced `command-gen --explain --shell posix|powershell` workflows.
+AWS collection requires an explicit expected account and region. Kubernetes native
+collection requires an explicit context and namespace. Both retain incomplete
+coverage instead of treating failed collection as healthy infrastructure.
+
+Run `python3 scripts/live-operations-practice.py` after building for synthetic
+adapter-to-reader checks without cloud requests or employer credentials.
