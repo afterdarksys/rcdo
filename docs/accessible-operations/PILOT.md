@@ -32,3 +32,13 @@ Measure the workflow, not the operator's visual ability. Do not record credentia
 ## Results
 
 No operator results have been recorded. Add findings here only after observation.
+
+## Structured continuation sessions
+
+Use `rcdo pilot start --suite accessibility --operator NAME --setup ACTUAL_SETUP`
+to open a structured session. `pilot show` lists the task IDs. Record observed
+results with `pilot record --task ID --outcome pass|fail|blocked --notes OBSERVATION
+--evidence FILE`. Use a separate `--suite integration` session for nonproduction
+Docker, IaC, Ansible inventory, Spacelift and endpoint checks. Preserve the actual
+CLI/AT versions and scope in setup notes. Artifact hashes detect changed evidence.
+No operator results have been filled in automatically.

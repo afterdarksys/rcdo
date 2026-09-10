@@ -49,19 +49,19 @@ Actual screen-reader, braille-display and magnification usability is unmeasured.
 Use the checklist in DEMO.md with the operator's real setup. Neither output width
 checks nor a sighted review can certify nonvisual task usability.
 
-## Remaining scope
+## Remaining scope — current
 
-CTX: Docker daemon identity, IaC workspace/backend, Ansible inventory and Spacelift
-run binding; cross-tool acquisition provenance; credential lifetime observations.
-NAV: full runbook steps, workspace registry and comparisons across evidence versions.
-EVT: continuous stream, bounded announcement pause, reconnection and gap markers.
-REL: paginated AWS/AliCloud relationship collection and navigable resource graph.
-IAC: replacement causes, policy/rule semantic changes and configuration dependencies.
-ANS: structured callback, resolved inventory/rollout scope and no_log validation.
-SPC: live run navigation, supersession and actual platform policy/approval state.
-HND: executed-change records, event references, signed provenance and optional AI wording.
+The older milestone entries below are delivery history. Current remaining scope:
 
-These remain planned work under PROJECT_PLAN.md, not production capabilities.
+- Direct remote event streams and provider reconnect handling beyond local-file monitoring.
+- Broader cloud relationships, backend adapters and effective permission simulation.
+- Resolved Ansible play limits/effective user and expanded version compatibility.
+- Complete Spacelift policy decision history and authenticated account acceptance.
+- Cross-file HCL references and nested-array identity bookmarks.
+- Durable remote receipts, signed provenance and full terminal compatibility.
+- Actual assistive-technology task observations and nonproduction cloud pilot.
+
+See the six-section continuation at the end of this file for latest delivery.
 
 ## Roadmap milestone: execution and configuration
 
@@ -228,3 +228,27 @@ Live integration and assistive-technology acceptance are not asserted.
   deadline. State tests cover redaction, large integers and changed-source refusal.
 - No cloud or remote infrastructure changes were performed. Broader provider,
   Ansible-version and assistive-technology workplace acceptance remain open.
+
+## Configuration, audit and six-section continuation
+
+Delivered configuration defaults for newer operator commands and opt-in JSONL
+command auditing (identity, UTC timestamps, exit status, redacted bounded output).
+The continuation adds audit investigation/rotation/retention, local-file live
+announcements, IAM/RAM/network scope explanations, native context acquisition,
+HCL reference and identity bookmark navigation, and operator acceptance sessions.
+See [the continuation guide](../next-six.md) for executable commands and limits.
+
+Operator sessions require actual setup/observation notes and bound evidence;
+unrun tasks remain pending and changed evidence becomes stale. Automated fixtures
+never certify device usability. Final validation:
+
+- `go test ./...`: passed, including localhost network regressions.
+- Focused race checks for all six sections: passed.
+- `go vet ./...` and `make build`: passed.
+- `python3 scripts/next-six-practice.py`: 18 local checks passed, including actual
+  installed Ansible localhost-inventory resolution and an empty OpenTofu module
+  initialized with a temporary local backend. The script isolates Ansible and
+  OpenTofu environment overrides and records results in its artifact directory.
+- No remote hosts, cloud resources, platform approvals or assistive-technology
+  settings were changed. Actual AT and authenticated cloud/Spacelift/Docker pilot
+  results remain pending; no operator pass was generated.

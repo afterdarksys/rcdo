@@ -28,26 +28,32 @@ runbook progression and handoffs. Both support ordinary files and pipes.
 No mandatory AI or daemon. User-requested execution must be explicit; no automatic
 retry of uncertain operations. Process exit is distinct from verified outcome.
 
-## Original workstreams
+## Original workstreams — current status
 
-- CTX — Partial: AWS/AliCloud named identity expectations and dated observations.
-  Remaining: Docker daemon identity, IaC workspace/backend, Ansible inventory,
-  Spacelift run context, acquisition provenance and observable credential lifetime.
-- NAV — Partial: persistent finding navigation, notes/bookmarks and stale history.
-  Remaining: whole-task registry and comparisons across successive evidence versions.
-- EVT — Partial: bounded Docker event grouping and accessible review.
-  Remaining: continuous feed, reconnect gaps and bounded announcement buffering.
-- REL — Planned: paginated AWS/AliCloud relationships with observed/config-derived/
-  inferred edges; parents, dependents, changes, graph-cycle and missing-region tests.
-- IAC — Planned extension: replacement paths, lifecycle order, unknown values,
-  IAM/RAM and network-rule semantic changes, config-derived dependencies, plan binding.
-- ANS — Planned extension: resolved host/rollout scope and opt-in structured callback;
-  distinguish skipped, unreachable, failed and unsupported check-mode tasks; no_log.
-- SPC — Planned extension: actual Spacelift run/plan binding, supersession, phase and
-  policy visibility. Reading acknowledgement must never imply platform approval.
-- HND — Partial: deterministic evidence-linked handoff with operator statements.
-  Remaining: process receipts, executed-change evidence, signed provenance and
-  optional evidence-constrained wording. No inferred remediation or auto-sending.
+- CTX — Native acquisition now covers AWS, explicit Docker context/daemon,
+  initialized IaC workspace/backend, Ansible inventory identity, and pinned
+  Spacelift run/commit/approval observations. Remaining: broader backend/provider
+  adapters, effective playbook execution scope and observed credential lifetimes.
+- NAV — Finding, incident, runbook, state and task registry navigation are delivered,
+  along with evidence comparisons, HCL references and identity-based list bookmarks.
+  Remaining: cross-file/module references and nested-array identity traversal.
+- EVT — Finite event review and live local-file announcements are delivered, with
+  bounded queues, pause/resume and explicit source gaps. Direct remote stream
+  reconnect and provider-specific event normalization remain open.
+- REL — AWS EC2 attachment collection and evidence-labelled resource navigation
+  are delivered. Broader service relationships and AliCloud collection remain open.
+- IAC — Replacement, unknown/sensitive values, configuration dependencies and
+  IAM/RAM/network scope comparisons are delivered. Effective permission simulation
+  and broader native rule normalization remain open.
+- ANS — Callback receipts, bounded live announcements, inventory fingerprints and
+  host/task outcome review are delivered. Play-level resolved limits, effective
+  remote user and broader Ansible-version compatibility remain open.
+- SPC — Run/commit binding, approval-needed and most-recent observations are
+  acquired through pinned read-only queries. Complete policy decision histories
+  and authenticated account compatibility testing remain open.
+- HND — Evidence-linked handoffs, local execution receipt review and configurable
+  command audit logging are delivered. Durable remote receipts and signed
+  provenance remain open; no automatic handoff sending is performed.
 
 ## Added workstreams and acceptance criteria
 
@@ -206,9 +212,9 @@ workplace credentials and assistive-technology acceptance remain separate.
 - [x] KUBE: investigate pods, deployments and correlated events.
 - [x] COMMAND: explain generated commands, required inputs and shell quoting.
 
-Other proposed sections (Ansible streaming, state navigation, permission semantics,
-network checks, task registry, continuous monitoring and local browser UI) remain
-follow-up scope rather than being implicitly completed by this priority batch.
+The subsequent operator and continuation batches deliver state navigation,
+permission-scope explanations, network checks, task registry and local-file
+monitoring. A local browser UI and direct remote stream monitoring remain open.
 
 ## Operator workflow batch
 
@@ -218,3 +224,19 @@ Each section has its own implementation commit and documented acceptance limits.
 - [x] STATE-NAV: redacted Terraform/OpenTofu state navigation and bookmarks.
 - [x] NETWORK: bounded DNS, TCP, TLS and HTTP investigation.
 - [x] TASKS: explicit registry and resume for incidents, reviews and runbooks.
+
+## Six-section continuation
+
+One commit per section; usage and limits are in [next-six.md](docs/next-six.md).
+
+- [x] Audit filters, output inspection, completed-run gzip rotation and explicit retention pruning.
+- [x] Local log/event/Ansible monitoring with pause/resume, bounded queues and source gaps.
+- [x] IAM/RAM and normalized network-scope explanations, integrated with plan policy review.
+- [x] Native Docker, IaC, Ansible and Spacelift context acquisition and provenance.
+- [x] Current-file HCL references and identity-based array bookmarks.
+- [x] Operator acceptance sessions, repeatable local scenarios and local native checks.
+- [ ] Actual screen-reader/braille/magnification task observations.
+- [ ] Authenticated nonproduction Docker/cloud/Spacelift compatibility pilot.
+
+Configuration defaults for the newer commands and opt-in command/output auditing
+are delivered. No automated test result substitutes for the two open pilot items.

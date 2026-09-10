@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"pilot",
 	"context-acquire",
 	"permission-diff",
 	"monitor",
@@ -85,6 +86,8 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "pilot":
+		err = runPilot(args, stdout, stderr)
 	case "context-acquire":
 		err = runContextAcquire(args, stdout, stderr)
 	case "permission-diff":

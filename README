@@ -608,3 +608,12 @@ The [operator workflow guide](docs/operator-workflows.md) covers `ansible-watch`
 sensitive state handling, explicit endpoint probes and resumable task registration.
 Run `python3 scripts/operator-workflows-practice.py` after building for synthetic
 practice with a localhost-only network endpoint.
+
+## Audit, monitoring and acceptance
+
+The [continuation guide](docs/next-six.md) covers audit investigation and retention,
+live local-file announcements, permission-scope comparisons, native context
+acquisition, HCL references, identity bookmarks and operator acceptance sessions.
+Run `python3 scripts/next-six-practice.py` after building for temporary local
+scenarios, including installed Ansible inventory and OpenTofu local-backend checks.
+Actual assistive-technology and authenticated cloud acceptance remain separate.

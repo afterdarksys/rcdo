@@ -144,3 +144,26 @@ state. Only a hash of the identity value is stored. One array level is supported
 nested arrays require a separate unambiguous source view. Ordinary path bookmarks
 continue to work. Saved writes now check both source and state versions and reject
 source/state aliases, including hard links.
+
+## 6. Operator and integration acceptance
+
+```
+rcdo pilot start --suite accessibility --operator 'Your name' --setup 'Actual OS, terminal, AT and versions' --state pilot.json
+rcdo pilot record --state pilot.json --task log-bookmark --outcome pass --notes 'Actual observed result and assistance needed' --evidence transcript.txt
+rcdo pilot show --state pilot.json
+```
+
+The accessibility suite includes identifying risk, log bookmarks, monitor pause,
+permission scope, context mismatch, identity bookmarks, task resume and audit
+output. The integration suite covers Docker, IaC, Ansible inventory, Spacelift
+and network acquisition in explicitly nonproduction environments. Task IDs appear
+in `pilot show`; records require actual operator/setup descriptions, an outcome,
+observation notes and a bound evidence artifact. Later observations supersede a
+task's displayed status while history remains intact. Changed evidence makes the
+result stale. Pending/blocked/stale tasks return 30; an all-observed suite with a
+failure returns 20; all operator-reported passes return 0. These records are
+operator reports, not independent proof of accessibility or production suitability.
+
+Automated scenarios are in `scripts/next-six-practice.py`; they do not fill in
+operator passes. Actual assistive-technology and authenticated cloud pilot results
+remain pending until an operator runs and records them.
