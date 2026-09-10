@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"collect",
 	"doctor",
 	"report-read",
 	"fleet-check",
@@ -65,6 +66,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "collect":
+		err = runCollect(args, stdout, stderr)
 	case "doctor":
 		err = runDoctor(args, stdout, stderr)
 	case "report-read":

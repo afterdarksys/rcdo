@@ -195,3 +195,17 @@ IaC replacement/sensitivity/comparison checks; normalized Spacelift policy,
 dependency/drift review and core run collection. Earlier planned IAC/SPC entries
 refer to remaining cross-tool acquisition and live integration, not absence of
 these RCDO features.
+
+## Live operations priority batch
+
+One commit per section. Native adapters are tested with controlled CLI responses;
+workplace credentials and assistive-technology acceptance remain separate.
+
+- [x] COLLECT: AWS context, EC2 fleet inventory and attachment graph acquisition.
+- [ ] CHANGES: compare evidence snapshots without treating disappearance as recovery.
+- [ ] KUBE: investigate pods, deployments and correlated events.
+- [ ] COMMAND: explain generated commands, required inputs and shell quoting.
+
+Other proposed sections (Ansible streaming, state navigation, permission semantics,
+network checks, task registry, continuous monitoring and local browser UI) remain
+follow-up scope rather than being implicitly completed by this priority batch.

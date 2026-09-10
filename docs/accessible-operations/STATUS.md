@@ -152,3 +152,9 @@ Live integration and assistive-technology acceptance are not asserted.
   large integer comparison, terminal control removal and step verification gates.
 - Workplace assistive-technology pilot: not run. Live cross-tool collector
   integration and authenticated outcome attestation remain follow-up work.
+
+## collect
+
+Added explicit AWS identity and paginated EC2 inventory/attachment acquisition feeding context, fleet and resource readers. Expected account gating and identity rechecks prevent silent cross-account collection; failed pages preserve incomplete coverage.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
