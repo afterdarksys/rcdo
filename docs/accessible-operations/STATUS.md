@@ -193,17 +193,37 @@ See ../live-operations.md for supported shells and scope.
 ## ansible-watch
 
 Added bounded Ansible callback receipt reading with required host coverage, per-task check mode, no_log handling and distinct failed/unreachable/skipped/changed results. An opt-in callback records no result bodies or module arguments.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../operator-workflows.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
 
 ## state-walk
 
 Added exact-address state show JSON navigation with parent/child/sibling traversal, search and saved bookmarks. Sensitivity masks and sensitive field names redact values; missing masks withhold resource values and changed source bytes block navigation updates.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../operator-workflows.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
 
 ## network-check
 
 Added direct bounded DNS/TCP/TLS/HTTP HEAD investigation. Probes reuse one selected socket, verify certificates, avoid redirects/proxies/credentials, and report failed and unattempted layers separately.
-Validation: focused regression tests; see ../roadmap-features.md for scope.
+Validation: focused regression tests; see ../operator-workflows.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## tasks
+
+Added an explicit named registry for incidents, reviews, runbooks and state navigation. Listing/resuming preserves cursor and next action, checks underlying evidence, detects replaced workflow identity and never advances or acknowledges work.
+Validation: focused regression tests; see ../operator-workflows.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
+
+### Operator workflow batch validation
+
+- `go test ./...`, `go vet ./...` and `make build`: passed.
+- Callback contract test: passed without Ansible or remote hosts.
+- Installed Ansible localhost-only check-mode play: five callback records;
+  task-level execution override, no_log and ignored failure verified. Its artifact
+  was read by the built CLI with blocked status, preserving the ignored failure.
+- `python3 scripts/operator-workflows-practice.py`: 22 expected-exit checks passed,
+  including a localhost-only HTTP endpoint and all four registry workflow kinds.
+- Network tests cover untrusted TLS, DNS failure, redirects and a silent-server
+  deadline. State tests cover redaction, large integers and changed-source refusal.
+- No cloud or remote infrastructure changes were performed. Broader provider,
+  Ansible-version and assistive-technology workplace acceptance remain open.

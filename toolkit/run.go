@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"tasks",
 	"network-check",
 	"state-walk",
 	"ansible-watch",
@@ -71,6 +72,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "tasks":
+		err = runTasks(args, stdout, stderr)
 	case "network-check":
 		err = runNetworkCheck(args, stdout, stderr)
 	case "state-walk":

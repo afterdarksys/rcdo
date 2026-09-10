@@ -82,3 +82,40 @@ HTTP status defaults to expected 200 and is configurable. HTTP success does not
 prove application dependencies work. Tests use local HTTP/TLS servers, controlled
 DNS failure and a silent-server deadline check. The implementation uses Go's
 [HTTP transport](https://pkg.go.dev/net/http) and [TLS verification](https://pkg.go.dev/crypto/tls).
+
+## Task switching
+
+```sh
+rcdo tasks add --registry tasks.json --name api --kind incident --input incident.json
+rcdo tasks add --registry tasks.json --name deploy --kind review --input review-session.json
+rcdo tasks list --registry tasks.json
+rcdo tasks resume --registry tasks.json --name api
+rcdo tasks remove --registry tasks.json --name api
+```
+
+Supported kinds: incident, review, runbook and state (state-walk navigation).
+The registry stores absolute workflow paths and a logical identity hash. It accepts
+normal progress edits but detects replacement with a different incident, review or
+source binding. This is change detection, not authenticated provenance. Listing and
+resuming recheck the workflow/evidence, preserve full risk status, show the saved
+position and next action, and never advance or acknowledge the underlying workflow.
+Incident resume also identifies the selected timeline entry, even when recent
+history is displayed. Registry operations never execute workflow instructions.
+
+Names are explicit; there is no recursive filesystem search or global task index.
+A missing registry lists as empty. Add refuses duplicate names; remove deletes only
+the registry entry. Missing/replaced/invalid workflow files remain incomplete.
+Reviews can perform their existing local Git freshness checks. Registry updates use
+optimistic guarded atomic replacement; concurrent reads may need repeating. Maximum
+100 tasks, 16 MiB per state file, 128 KiB resume details. JSON output includes status,
+position, next action and individual gaps. An add can return 20/30 because the newly
+registered workflow has risk/gaps; registration itself can still have succeeded.
+
+## Practice
+
+After `make build`, run `python3 scripts/operator-workflows-practice.py`. It creates
+synthetic Ansible receipts, a sensitive state fixture and all four task kinds,
+then checks navigation, redaction, missing evidence and task continuity. Network
+checks contact only a temporary localhost HTTP server. Numbered transcripts and
+expected/actual exits remain in a private temporary directory. No cloud credentials,
+remote host access or infrastructure changes are involved.

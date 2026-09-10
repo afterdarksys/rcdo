@@ -600,3 +600,11 @@ coverage instead of treating failed collection as healthy infrastructure.
 
 Run `python3 scripts/live-operations-practice.py` after building for synthetic
 adapter-to-reader checks without cloud requests or employer credentials.
+
+## Operator workflows
+
+The [operator workflow guide](docs/operator-workflows.md) covers `ansible-watch`,
+`state-walk`, `network-check` and `tasks`. It includes the opt-in Ansible callback,
+sensitive state handling, explicit endpoint probes and resumable task registration.
+Run `python3 scripts/operator-workflows-practice.py` after building for synthetic
+practice with a localhost-only network endpoint.
