@@ -250,6 +250,6 @@ are delivered. No automated test result substitutes for the two open pilot items
 ## Policy workflow batch
 
 - [x] Five composable Rego starter safeguards with passing/failing fixtures.
-- [ ] Fixture-based policy testing.
+- [x] Fixture-based policy testing.
 - [ ] Before/after policy comparison on identical inputs.
 - [ ] Combined built-in IaC and Rego review with individual check evidence.

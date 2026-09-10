@@ -259,3 +259,8 @@ Five Rego starter safeguards and passing/failing normalized input examples are
 available. Missing facts are incomplete; supplied approval/public flags are not
 independent verification. Automated OPA tests exercise each pack. Usage and limits:
 [policy workflows](../policy-workflows.md).
+
+`rego-test` now runs bounded fixture suites with status/exact-ID assertions and
+input/module hashes. Passing expected denials are distinct from incomplete
+execution. Automated checks cover mismatches, malformed suites, missing decisions,
+and the combined six-case starter suite.

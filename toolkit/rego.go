@@ -21,6 +21,8 @@ import (
 // Deliberately allow only pure builtins, including on newer OPA releases.
 const regoBuiltins = `eq assign internal.member_2 internal.member_3 internal.template_string abs ceil floor round plus minus mul div rem numbers.range count sum product max min sort all any concat contains startswith endswith lower upper split replace replace_n trim trim_left trim_right trim_prefix trim_suffix trim_space substring indexof sprintf format_int to_number is_number is_string is_boolean is_array is_object is_set is_null type_name equal neq gt gte lt lte and or minus union intersection walk object.get object.keys object.filter object.remove object.subset object.union object.union_n array.concat array.reverse array.slice json.marshal json.unmarshal json.is_valid regex.match regex.is_valid glob.match semver.compare semver.is_valid net.cidr_contains net.cidr_intersects net.cidr_is_valid strings.any_prefix_match strings.any_suffix_match`
 
+var regoQueryPattern = regexp.MustCompile(`^data(?:\.[A-Za-z_][A-Za-z0-9_]*)+$`)
+
 var regoInvoke = func(ctx context.Context, name string, args []string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.WaitDelay = time.Second
@@ -64,7 +66,7 @@ func runRego(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	if len(modules) == 0 || len(modules) > 32 {
 		return fmt.Errorf("provide 1 to 32 --rego files")
 	}
-	if !regexp.MustCompile(`^data(?:\.[A-Za-z_][A-Za-z0-9_]*)+$`).MatchString(query) {
+	if !regoQueryPattern.MatchString(query) {
 		return fmt.Errorf("query must be a data.package.rule reference")
 	}
 	if timeout < 100*time.Millisecond || timeout > time.Minute {
