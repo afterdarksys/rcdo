@@ -51,3 +51,34 @@ and unknown observations remain distinct. Newly matching required fields do not
 prove a service recovery event. Removed manifest hosts remain incomplete. Changed
 baseline requirements are rejected rather than presented as improved health.
 Artifacts are bounded to 16 MiB. No collectors, commands or remediation are launched.
+
+## KUBE: Kubernetes investigation
+
+```sh
+rcdo kube-explain --native --context staging --namespace api --save-snapshot kube.json
+rcdo kube-explain --input kube.json --context staging --namespace api --format json
+```
+
+Native mode runs only namespace-scoped `kubectl get` lists for pods, deployments
+and core events, with explicit context, 30-second request timeouts and chunking.
+The existing runner also bounds total process time/output. No logs, exec, rollout
+or mutation commands run. Context is a configured selector, not authenticated
+cluster identity. The requests are successive observations, not an atomic snapshot.
+
+Saved normalized schema v1 contains context, namespace, source, collected_at,
+coverage (`pods`/`deployments`/`events`: pass/partial/error) and arrays named pods,
+deployments and events. Object fields retain only metadata identity/generation,
+expected container names/replicas, reviewed status fields, event references/reasons,
+counts and last timestamps. Environment values and event-message bodies are omitted.
+Use `--save-snapshot` to create a replayable example; existing files are protected.
+The snapshot has a 16 MiB and 10000-total-object limit. Partial lists, failed requests,
+missing status and stale snapshots (default 15m) cannot produce a clean review.
+
+Findings distinguish [pod phase, readiness and container waiting reasons](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/).
+Deployment review checks current generation, replica convergence and
+[ProgressDeadlineExceeded](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/).
+Warning events correlate by object UID; unmatched events remain historical rather
+than being attributed to a newly created pod with the same name. Restart counts are
+cumulative, not rates. Reports give numbered findings, event UID references and
+previous-log command suggestions; raw logs remain a separate explicit operation.
+Use `report-read` or `review-session` for saved report navigation.

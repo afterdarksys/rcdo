@@ -164,3 +164,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Added report and fleet snapshot comparisons with source fingerprints, persistent risk and explicit uncertainty. Finding disappearance is not recovery, missing hosts remain unknown and changed baselines cannot imply improvement.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## kube-explain
+
+Added explicit-context Kubernetes collection and replay with pod/container readiness, restart reasons, deployment convergence/deadlines and UID-correlated warning events. Missing sections and stale evidence remain incomplete; saved snapshots omit environment and message bodies.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

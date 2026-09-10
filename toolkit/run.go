@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"kube-explain",
 	"changes",
 	"collect",
 	"doctor",
@@ -67,6 +68,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "kube-explain":
+		err = runKubeExplain(args, stdin, stdout, stderr)
 	case "changes":
 		err = runChanges(args, stdout, stderr)
 	case "collect":
