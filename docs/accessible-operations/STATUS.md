@@ -104,3 +104,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Implemented required cross-tool context comparison, kind/value mismatches, freshness, credential expiry and before/after identity changes over normalized observations.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## resource-walk
+
+Implemented numbered dependency/dependent traversal with explicit observed/configuration/inferred edges, scope coverage, stale evidence, missing nodes and cycle handling.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

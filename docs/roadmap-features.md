@@ -55,3 +55,22 @@ are accepted. `--before` reports required-context identity changes; it is histor
 comparison, not fresh identity evidence. Default age is 5m. This command compares
 normalized artifacts; it does not acquire Kubernetes/Docker identity or modify
 shell profiles. Existing context/Spacelift/IaC adapters remain separate collectors.
+
+## REL: resource dependency navigation
+
+`rcdo resource-walk --input graph.json --resource lb --depth 2`
+reads dependencies; `--direction dependents` reverses edges. Each result has a
+number, exact resource ID, type, account, region, depth, source and confidence.
+Navigate further by supplying that ID as `--resource` against the same artifact.
+The finding JSON can also use existing review-session bookmarks.
+
+Schema: `{"schema_version":"1","complete":true,"collected_at":"2026-09-10T12:00:00Z","source":"collector","scopes":[{"account":"123","region":"us-east-1","complete":true,"outcome":"pass"}],"nodes":[{"id":"lb","type":"load-balancer","account":"123","region":"us-east-1"},{"id":"vm","type":"instance","account":"123","region":"us-east-1"}],"edges":[{"from":"lb","to":"vm","kind":"observed","source":"cloud API"}]}`.
+
+An edge points from dependent to dependency. Kinds are observed, configuration,
+or inferred; they are never relabelled as equivalent evidence. `--require-scope
+123/us-east-1` is repeatable. Missing nodes/scopes, denied or partial pagination,
+and stale graph evidence are incomplete. Producers set complete only after all
+pages succeed; RCDO cannot independently attest an unsigned artifact. Cycles are
+reported and traversal terminates. Depth is 1..10; input <=16 MiB, nodes <=10000,
+edges <=50000. Default evidence age is 15m. This implements graph review/navigation,
+not live paginated AWS/AliCloud collection or automatic relationship discovery.

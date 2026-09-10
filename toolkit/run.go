@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"resource-walk",
 	"context-summary",
 	"log-read",
 	"markdown-view", "to-markdown",
@@ -59,6 +60,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "resource-walk":
+		err = runResourceWalk(args, stdin, stdout, stderr)
 	case "context-summary":
 		err = runContextSummary(args, stdin, stdout, stderr)
 	case "log-read":
