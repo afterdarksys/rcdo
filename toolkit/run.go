@@ -44,7 +44,11 @@ var commandNames = []string{
 	"context", "handoff", "watch", "jsonprobe-check", "ops-policy-check", "pr-manager", "repo-policy-check", "review", "review-brief", "review-change", "review-session", "runbook-check", "spacelift-check", "tofu-check",
 }
 
-func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+func runCommand(command string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	return runCommandObserved(command, args, stdin, stdout, stderr, nil)
+}
+
+func runCommandObserved(command string, args []string, stdin io.Reader, stdout, stderr io.Writer, observe func([]string)) int {
 	if command == "rcdo" || command == "git-tools" || command == "" {
 		if len(args) == 0 || args[0] == "help" || args[0] == "--help" {
 			printHelp(stdout)
@@ -70,6 +74,11 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 			fmt.Fprintf(stderr, "error: %v\n", err)
 			return 2
 		}
+	} else if configPath != "" && !hasCLIFlag(args, "file") {
+		args = append(append([]string{}, args...), "--file", configPath)
+	}
+	if observe != nil {
+		observe(args)
 	}
 	switch command {
 	case "tasks":

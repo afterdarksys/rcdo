@@ -22,6 +22,7 @@ type appConfig struct {
 	Commands        map[string]map[string]any   `json:"commands,omitempty" yaml:"commands,omitempty"`
 	AI              aiRoutingConfig             `json:"ai" yaml:"ai"`
 	Providers       map[string]aiProviderConfig `json:"providers,omitempty" yaml:"providers,omitempty"`
+	Audit           auditConfig                 `json:"audit" yaml:"audit"`
 }
 
 type aiRoutingConfig struct {
@@ -104,6 +105,7 @@ func flagSet(values ...string) map[string]bool {
 func defaultAppConfig() appConfig {
 	return appConfig{
 		Version:         "1",
+		Audit:           auditConfig{File: "audit.jsonl", Output: "redacted", MaxOutputBytes: 65536},
 		CredentialsFile: "credentials.json",
 		Defaults:        map[string]any{"format": "text", "environment": "unknown", "width": 100},
 		Commands: map[string]map[string]any{
@@ -288,6 +290,9 @@ func loadAppConfig(path string) (appConfig, bool, error) {
 }
 
 func validateAppConfig(config appConfig) error {
+	if err := validateAuditConfig(config.Audit); err != nil {
+		return err
+	}
 	if config.Version != "1" {
 		return fmt.Errorf("version must be 1")
 	}
@@ -380,6 +385,14 @@ func runAppConfig(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 			config = appConfig{CredentialsFile: "credentials.json"}
 		}
 		fmt.Fprintf(stdout, "Configuration: %s\nCredentials: %s\n", path, credentialsPath(path, config))
+		auditPath := config.Audit.File
+		if auditPath == "" {
+			auditPath = "audit.jsonl"
+		}
+		if !filepath.IsAbs(auditPath) {
+			auditPath = filepath.Join(filepath.Dir(path), auditPath)
+		}
+		fmt.Fprintf(stdout, "Audit: %s (enabled: %t)\n", auditPath, config.Audit.Enabled)
 		return nil
 	case "init":
 		return initializeAppConfig(path, force, stdout)

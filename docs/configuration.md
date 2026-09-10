@@ -18,6 +18,11 @@ The generated YAML contains runtime defaults, AI routing, and provider sections:
 ```yaml
 version: "1"
 credentials_file: credentials.json
+audit:
+  enabled: false
+  file: audit.jsonl
+  output: redacted
+  max_output_bytes: 65536
 defaults:
   format: text
   environment: unknown
@@ -120,6 +125,66 @@ Decomposition aliases inherit settings under `commands.decompose`. For example:
 rcdo config set --key commands.decompose.region --value us-east-1
 rcdo config set --key commands.decompose.profile --value work-readwrite
 ```
+
+## Audit logging
+
+Enable local audit logging through the same configuration:
+
+```sh
+rcdo config set --key audit.file --value audit.jsonl
+rcdo config set --key audit.output --value redacted
+rcdo config set --key audit.max_output_bytes --value 65536
+rcdo config set --key audit.enabled --value true
+rcdo config path
+```
+
+A relative audit path resolves beside the configuration file. `config path` shows
+the destination and whether logging is enabled. Older configs without an `audit`
+section keep logging disabled. Enabling it takes effect on the next invocation;
+an invocation that disables it still finishes its record in the previous log.
+
+Each invocation writes two JSONL events with a shared `run_id`: `start` before
+execution and `finish` afterward. Fields include the command, redacted supplied
+arguments, effective arguments after defaults (on completion), config path,
+OS username and UID, effective UID, hostname, PID, working directory, UTC RFC3339
+timestamps, duration, command exit code, and separate stdout/stderr captures.
+Identity describes the local OS account; shared service accounts do not identify
+the individual human behind them. Nested native commands are represented through
+the rcdo invocation and its output, not separate shell-process audit events.
+
+`output: redacted` captures at most `max_output_bytes` per stream (default 65536;
+maximum 1048576). Byte counts and truncation flags disclose omitted output. A
+truncated final line is withheld. Output is redacted after capture so secrets
+split across writes are still handled. Common secret assignments, bearer tokens,
+AWS access keys and private-key material are filtered; sensitive argument values
+and free-form `--value`, `--text`, and `--question` values are withheld. Redaction
+cannot identify every arbitrary secret. Use `output: none` for metadata and byte
+counts without retaining stdout/stderr. Stdin and environment contents are never
+captured directly. Output written only to an artifact file is not copied into the
+audit; the arguments retain the destination path. Terminal/pipeline output and
+ordinary command exit codes remain unchanged when audit writes succeed.
+
+Audit files are created with mode `0600`; symlinks, nonregular files and files
+readable by other accounts are rejected. A short directory lock coordinates
+concurrent appenders and each event is flushed to disk. If the start record
+cannot be saved, the command does not execute (exit 2). If the finish record
+cannot be saved, rcdo reports the original command status and returns 2; completed
+actions are not rolled back. A start without a finish can mean interruption,
+crash or logging failure and must not be interpreted as success.
+
+Audit logging is a local operational record, not a tamper-proof central audit
+service: the OS account can edit its files or select another configuration.
+An unreadable/invalid configuration prevents execution but cannot provide a
+usable audit destination. No automatic retention or rotation is performed; archive
+or rotate the JSONL file when rcdo invocations are idle. If a process dies while
+holding the short append lock, remove `<audit-file>.lock` only after confirming
+no writer is active. Config changes and help/version invocations are logged when
+they select an audit-enabled configuration.
+
+For a local integration check, run `make build` followed by
+`python3 scripts/config-audit-practice.py`. It uses a temporary config and gzip
+fixture, exercises configured navigation and a command failure, and checks audit
+record pairing from concurrent CLI processes without contacting cloud services.
 
 ## AI provider order
 
