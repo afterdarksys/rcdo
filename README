@@ -617,3 +617,7 @@ acquisition, HCL references, identity bookmarks and operator acceptance sessions
 Run `python3 scripts/next-six-practice.py` after building for temporary local
 scenarios, including installed Ansible inventory and OpenTofu local-backend checks.
 Actual assistive-technology and authenticated cloud acceptance remain separate.
+
+Local Rego policies: `rcdo rego-check --rego rules.rego --input config.json`.
+Requires OPA 1.x on PATH. See docs/rego.md and examples/rego/terraform.rego for
+structured decisions, CI exit codes, restricted builtins, and plan checks.
