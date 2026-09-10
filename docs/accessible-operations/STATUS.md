@@ -116,3 +116,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Implemented independent resumable incident workspaces with hypotheses, action records, next steps, bounded timelines and versioned evidence attachments. Stale current evidence remains visible with exit 30.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## runbook
+
+Implemented ordered runbook reading, attempted/completed operator records and fresh runbook/step/target-bound verification before advancing. Failed or missing checks preserve stop conditions; instructions are never executed.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

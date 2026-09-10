@@ -103,3 +103,28 @@ Past versions are historical references and may no longer exist. Start refuses
 existing state; updates use optimistic guarded atomic replacement. Common secret
 patterns are redacted in operator text, not guaranteed arbitrary-secret detection.
 Timeline limit is 10000 entries; text statements are bounded single-line labels.
+
+## RUN: evidence-gated runbook progression
+
+`rcdo runbook start --input runbook.json --state progress.json` starts a versioned
+runbook; `read`, `attempt`, `complete`, `verify --input checks.json`, then `next`
+advance distinct states. `show`, `back` and `handoff` preserve reading continuity.
+No instruction is executed. Attempt/completion are explicit operator records.
+
+A runbook has schema_version 1, title, nonempty exact target map and ordered steps.
+Each step has id, title, instruction, expected, stop_conditions (text array) and
+checks (nonempty unique check IDs). All preceding/current steps must be verified
+to advance. Example step:
+`{"id":"health","title":"Check API","instruction":"Inspect health probe","expected":"Probe passes","stop_conditions":["API unreachable"],"checks":["api-health"]}`.
+
+Verification schema:
+`{"schema_version":"1","runbook_sha256":"EXACT_BOOK_HASH","step_id":"health","targets":{"environment":"staging"},"source":"probe adapter","collected_at":"2026-09-10T12:00:00Z","complete":true,"checks":[{"id":"api-health","status":"pass","evidence":"probe-record-123"}]}`.
+Runbook hash, step ID and target map must match. Missing/unknown/failed checks,
+partial collection, stale times and wrong identities cannot verify a step. Passed
+checks require evidence references. Failed re-verification downgrades the step to
+completed. Previously verified artifact hashes and freshness are rechecked before
+next/handoff; changes cannot silently preserve an approval. Sources are supplied
+unsigned evidence, not independently authenticated observations. Text stop
+conditions guide operators; required check results provide the enforceable gates.
+Default max age is 15m. Maximum 1000 steps. JSON retains the runbook/progress and
+verification report; protect these files as operational evidence.
