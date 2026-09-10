@@ -81,3 +81,41 @@ effective-policy evaluation and native cloud rule normalization are not inferred
 Semantics follow [AWS policy evaluation](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
 and [RAM policy elements](https://www.alibabacloud.com/help/en/ram/policy-elements).
 Other policies, conditions, routing and firewalls can change the final outcome.
+
+## 4. Acquire and verify context
+
+```
+rcdo context-acquire --native --kind docker --docker-context work --name docker --output docker-context.json
+rcdo context-acquire --native --kind tofu --directory ./infra --name iac --merge docker-context.json --output contexts.json
+rcdo context-acquire --native --kind ansible --inventory inventory.ini --name rollout --output inventory-context.json
+rcdo context-acquire --native --kind spacelift --stack example --run RUN_ID --expect-endpoint https://example.app.spacelift.io --name space --output space-context.json
+rcdo context-summary --input contexts.json --expect expected-contexts.json
+```
+
+Acquisition is explicit and preserves command provenance and output/source hashes
+without copying raw native output. Context bundles feed the existing expectation
+checker. `--merge` copies existing named observations without refreshing their
+timestamps; duplicate names require a new bundle. Output files never overwrite.
+
+Docker pins an explicit context, acquires the daemon ID, and rechecks the endpoint.
+IaC calls workspace show and version, reads initialized backend metadata from
+`TF_DATA_DIR` or `.terraform`, and rechecks workspace/source binding. It emits only
+selected backend identity fields; S3 nondefault workspace keys include their
+workspace prefix. Backend credentials/state values are withheld, remote backend
+reachability is not proven, and unsupported backend-specific identity fields stay
+missing. Ansible inventory acquisition resolves host names and fingerprints the
+source and sorted host set. It omits host variables and does not establish play
+limits, effective remote user or host reachability. Inventory plugins can execute
+locally, hence the explicit `--native` flag.
+
+Spacelift checks the expected endpoint before querying a pinned stack/run and
+rechecks authenticated identity afterward. Values include commit, state,
+`needs_approval` and `is_most_recent`. Account is the endpoint hostname, not an
+invented internal account ID. These are platform observations, not local approval
+actions or a complete history of individual policy decisions. Missing fields or
+partial responses return incomplete evidence. Credential expiry is not guessed.
+
+Adapter references: [Docker contexts](https://docs.docker.com/engine/manage-resources/contexts/),
+[OpenTofu environment](https://opentofu.org/docs/cli/config/environment-variables/),
+[Ansible inventory CLI](https://docs.ansible.com/projects/ansible-core/devel/cli/ansible-inventory.html),
+and [Spacelift run query fields](https://github.com/spacelift-io/spacectl/blob/main/internal/cmd/stack/run_list.go).

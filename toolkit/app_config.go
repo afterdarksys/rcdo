@@ -43,6 +43,7 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"context-acquire":     flagSet("kind"),
 	"permission-diff":     flagSet("format", "width", "environment", "kind"),
 	"monitor":             flagSet("width", "state", "syntax", "max-queue", "batch", "interval", "duration"),
 	"audit":               flagSet("format", "width", "limit"),

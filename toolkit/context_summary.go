@@ -11,6 +11,7 @@ import (
 )
 
 type contextObservation struct {
+	Provenance  []string          `json:"provenance,omitempty"`
 	Kind        string            `json:"kind"`
 	Values      map[string]string `json:"values"`
 	CollectedAt string            `json:"collected_at"`
@@ -34,8 +35,8 @@ type contextExpectations struct {
 
 var contextFields = map[string][]string{
 	"aws": {"account", "region", "profile", "principal"}, "alicloud": {"account", "region", "profile", "principal"},
-	"kubernetes": {"cluster", "namespace", "server", "user"}, "terraform": {"workspace", "backend", "backend_key", "engine_version"}, "tofu": {"workspace", "backend", "backend_key", "engine_version"},
-	"docker": {"endpoint", "daemon_id"}, "spacelift": {"account", "stack", "run", "commit"}, "ansible": {"inventory_sha256", "limit", "user"},
+	"kubernetes": {"cluster", "namespace", "server", "user"}, "terraform": {"workspace", "backend", "backend_key", "engine_version", "backend_bucket", "backend_region", "backend_container", "backend_account", "backend_prefix"}, "tofu": {"workspace", "backend", "backend_key", "engine_version", "backend_bucket", "backend_region", "backend_container", "backend_account", "backend_prefix"},
+	"docker": {"endpoint", "daemon_id"}, "spacelift": {"account", "stack", "run", "commit", "endpoint", "principal", "state", "needs_approval", "is_most_recent"}, "ansible": {"inventory_sha256", "limit", "user", "inventory_hosts_sha256", "host_count"},
 }
 
 func contextValuesValid(kind string, values map[string]string) bool {
