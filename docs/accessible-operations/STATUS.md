@@ -189,3 +189,9 @@ See ../live-operations.md for supported shells and scope.
   using synthetic AWS/kubectl adapters and the built CLI.
 - No live cloud credentials, cluster access or provider mutations were used.
 - Workplace provider compatibility and assistive-technology acceptance remain open.
+
+## ansible-watch
+
+Added bounded Ansible callback receipt reading with required host coverage, per-task check mode, no_log handling and distinct failed/unreachable/skipped/changed results. An opt-in callback records no result bodies or module arguments.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

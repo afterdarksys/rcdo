@@ -5,3 +5,6 @@
 .claude/
 .code-review-graph/
 .gstack/
+
+# Python callback and practice-script bytecode.
+__pycache__/

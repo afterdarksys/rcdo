@@ -209,3 +209,12 @@ workplace credentials and assistive-technology acceptance remain separate.
 Other proposed sections (Ansible streaming, state navigation, permission semantics,
 network checks, task registry, continuous monitoring and local browser UI) remain
 follow-up scope rather than being implicitly completed by this priority batch.
+
+## Operator workflow batch
+
+Each section has its own implementation commit and documented acceptance limits.
+
+- [x] ANS-READ: opt-in Ansible receipts and host/task rollout reading.
+- [ ] STATE-NAV: redacted Terraform/OpenTofu state navigation and bookmarks.
+- [ ] NETWORK: bounded DNS, TCP, TLS and HTTP investigation.
+- [ ] TASKS: explicit registry and resume for incidents, reviews and runbooks.
