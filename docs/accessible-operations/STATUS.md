@@ -85,3 +85,10 @@ with built-in readers. Supports linear records, bounded input, no-overwrite outp
 and explicit missing/OCR/formula-cache limitations. Tests, vet, build and native
 DOCX/PDF conversion smoke checks passed. See ../document-conversion.md.
 Actual assistive-technology usability remains unverified.
+
+## Markdown reading
+
+Implemented: `markdown-view` reads structured Markdown with section navigation,
+search, labelled table rows, persistent bookmarks and exact-source freshness.
+Full tests, vet, build and converter-to-viewer smoke checks passed. See
+../markdown-viewer.md. Assistive-technology acceptance is still pending.

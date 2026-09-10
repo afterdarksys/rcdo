@@ -14,6 +14,9 @@ cat inventory.csv | rcdo to-markdown --from csv --header=false
 rcdo to-markdown --input inventory.csv --delimiter ';'
 ```
 
+Read converted Markdown directly with `rcdo to-markdown --input inventory.csv |
+rcdo markdown-view`; see the [built-in viewer](markdown-viewer.md).
+
 Use `--table-mode records` for a linear, screen-reader-friendly list of labelled
 fields. Each label includes its column number, keeping duplicate headings
 unambiguous. `--table-mode table` (default) generates GitHub-flavored Markdown

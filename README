@@ -110,6 +110,21 @@ with configurable primary, backup, and tertiary order. See
 
 ## Toolkit commands
 
+### `markdown-view`
+
+Read Markdown in plain terminal text with section navigation, labelled table rows,
+code blocks, search and persistent bookmarks:
+
+```sh
+rcdo markdown-view --input README --toc
+rcdo markdown-view --input runbook.md --find rollback
+rcdo markdown-view start --input runbook.md --state reading.json
+rcdo markdown-view next --state reading.json
+rcdo to-markdown --input inventory.csv | rcdo markdown-view
+```
+
+See [viewer options and saved reading](docs/markdown-viewer.md).
+
 ### `to-markdown`
 
 Convert DOCX, PDF, CSV and XLSX to Markdown locally:

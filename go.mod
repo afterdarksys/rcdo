@@ -5,6 +5,7 @@ go 1.24.0
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/hashicorp/hcl/v2 v2.24.0
+	github.com/yuin/goldmark v1.8.6
 	github.com/zclconf/go-cty v1.16.3
 	gopkg.in/yaml.v3 v3.0.1
 )
