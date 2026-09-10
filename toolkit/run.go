@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"to-markdown",
 	"spacelift-watch", "iac-config-check", "command-gen", "plan-explain", "plan-diff", "iac-validate", "iac-context", "spacelift-runs", "spacelift-diff",
 	"a11y-output-check", "ai-assist", "ansible-check", "ansible2ali", "ansible2aws", "cloud-context-check", "config", "config-diff", "config-explain", "config-remove", "config-set", "config-walk", "receipt-review", "decompose", "deploy-review", "diff-walk", "error-explain", "evidence-pack", "gha-tool",
 	"git-danger-check", "git-isimportant-check", "git-update-json", "hcl2ali", "hcl2aws",
@@ -56,6 +57,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "to-markdown":
+		err = runToMarkdown(args, stdin, stdout, stderr)
 	case "spacelift-watch":
 		err = runSpaceWatch(args, stdin, stdout, stderr)
 	case "iac-config-check":

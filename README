@@ -110,6 +110,23 @@ with configurable primary, backup, and tertiary order. See
 
 ## Toolkit commands
 
+### `to-markdown`
+
+Convert DOCX, PDF, CSV and XLSX to Markdown locally:
+
+```sh
+rcdo to-markdown --input report.docx --output report.md
+rcdo to-markdown --input report.pdf --output report.md
+rcdo to-markdown --input inventory.csv
+rcdo to-markdown --input budget.xlsx --sheet Budget --table-mode records
+```
+
+DOCX uses Pandoc; PDF uses Poppler's `pdftotext`. CSV/XLSX have built-in readers.
+`--output` refuses existing files. Spreadsheet display formatting and PDF OCR are
+not included; missing formula results and extraction gaps remain explicit.
+See [conversion options and limitations](docs/document-conversion.md).
+
+
 ### `config`
 
 Manage user defaults and AI credential routing:

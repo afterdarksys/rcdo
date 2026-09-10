@@ -77,3 +77,11 @@ The full roadmap remains in progress; no workplace acceptance is claimed.
 
 Validation: full Go test suites and go vet passed in both projects; the offline
 cross-tool demo passed. Missing Utils receipt and RCDO toolkit race tests passed.
+
+## Document conversion
+
+Implemented: `to-markdown` converts DOCX/PDF with local Pandoc/Poppler and CSV/XLSX
+with built-in readers. Supports linear records, bounded input, no-overwrite output
+and explicit missing/OCR/formula-cache limitations. Tests, vet, build and native
+DOCX/PDF conversion smoke checks passed. See ../document-conversion.md.
+Actual assistive-technology usability remains unverified.
