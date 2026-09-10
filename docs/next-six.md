@@ -119,3 +119,28 @@ Adapter references: [Docker contexts](https://docs.docker.com/engine/manage-reso
 [OpenTofu environment](https://opentofu.org/docs/cli/config/environment-variables/),
 [Ansible inventory CLI](https://docs.ansible.com/projects/ansible-core/devel/cli/ansible-inventory.html),
 and [Spacelift run query fields](https://github.com/spacelift-io/spacectl/blob/main/internal/cmd/stack/run_list.go).
+
+## 5. Reference and identity navigation
+
+```
+rcdo config-walk goto --path '$.resource.aws_instance.web.ami'
+rcdo config-walk references
+rcdo config-walk follow --reference 1
+rcdo config-walk goto --path '$.servers[1].port'
+rcdo config-walk bookmark --name api-port --identity-key id
+rcdo config-walk goto --name api-port
+```
+
+HCL expression references resolve to declarations in the current file: variables,
+locals, resources, data sources and module blocks. References are numbered and
+carry source lines. Follow never evaluates expressions or opens external modules;
+unavailable references leave position unchanged and return 30. Runtime attributes
+may resolve only to their configuration declaration, which is labelled explicitly.
+
+Identity bookmarks bind an array item using a direct nonsensitive scalar key and
+retain a selected child suffix. A bookmark resolves that identity again after
+list reordering. Missing or duplicate identities refuse relocation and preserve
+state. Only a hash of the identity value is stored. One array level is supported;
+nested arrays require a separate unambiguous source view. Ordinary path bookmarks
+continue to work. Saved writes now check both source and state versions and reject
+source/state aliases, including hard links.

@@ -15,12 +15,13 @@ import (
 )
 
 type configWalkState struct {
-	SchemaVersion string            `json:"schema_version"`
-	Source        string            `json:"source"`
-	Syntax        string            `json:"syntax"`
-	Cursor        string            `json:"cursor"`
-	SourceSHA256  string            `json:"source_sha256"`
-	Bookmarks     map[string]string `json:"bookmarks"`
+	IdentityBookmarks map[string]configIdentityBookmark `json:"identity_bookmarks,omitempty"`
+	SchemaVersion     string                            `json:"schema_version"`
+	Source            string                            `json:"source"`
+	Syntax            string                            `json:"syntax"`
+	Cursor            string                            `json:"cursor"`
+	SourceSHA256      string                            `json:"source_sha256"`
+	Bookmarks         map[string]string                 `json:"bookmarks"`
 }
 
 func saveConfigWalk(path string, s configWalkState, create bool) error {
@@ -45,11 +46,11 @@ func saveConfigWalk(path string, s configWalkState, create bool) error {
 }
 func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 || oneOf(args[0], "help", "--help") {
-		fmt.Fprintln(stdout, "config-walk: persistent structural configuration navigation\nUsage: config-walk COMMAND [options]\nCommands: start, show, parent, child, next, previous, find, goto, bookmark\nPaths are exact; bookmarks never evaluate cloud configuration.")
+		fmt.Fprintln(stdout, "config-walk: persistent structural configuration navigation\nUsage: config-walk COMMAND [options]\nCommands: start, show, parent, child, next, previous, find, goto, bookmark, references, follow\nPaths are exact; bookmarks never evaluate cloud configuration.")
 		return nil
 	}
 	mode, args := args[0], args[1:]
-	if !oneOf(mode, "start", "show", "parent", "child", "next", "previous", "find", "goto", "bookmark") {
+	if !oneOf(mode, "start", "show", "parent", "child", "next", "previous", "find", "goto", "bookmark", "references", "follow") {
 		return fmt.Errorf("unknown config-walk command")
 	}
 	fs := flag.NewFlagSet("config-walk "+mode, flag.ContinueOnError)
@@ -57,7 +58,8 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 	statePath := fs.String("state", ".rcdo-config-walk.json", "navigation state file")
 	width := fs.Int("width", 72, "text width; minimum 40")
 	format := fs.String("format", "text", "text or json; JSON retains exact paths")
-	var input, syntax, path, name, query string
+	var input, syntax, path, name, query, identityKey string
+	reference := 1
 	if mode == "start" {
 		fs.StringVar(&input, "input", "", "configuration file")
 		fs.StringVar(&syntax, "syntax", "auto", "auto, json, yaml, toml, hcl")
@@ -66,7 +68,11 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		fs.StringVar(&path, "path", "", "exact path")
 		fs.StringVar(&name, "name", "", "bookmark name")
 	}
+	if mode == "follow" {
+		fs.IntVar(&reference, "reference", 1, "one-based reference from references")
+	}
 	if mode == "bookmark" {
+		fs.StringVar(&identityKey, "identity-key", "", "direct scalar key that identifies this array item")
 		fs.StringVar(&name, "name", "", "new bookmark name")
 	}
 	if mode == "find" {
@@ -80,6 +86,7 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		return fmt.Errorf("invalid arguments, format or width")
 	}
 	var state configWalkState
+	var previous []byte
 	if mode == "start" {
 		if input == "" {
 			return fmt.Errorf("start requires --input")
@@ -98,12 +105,19 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		if err != nil {
 			return err
 		}
+		previous = data
 		if json.Unmarshal(data, &state) != nil || state.SchemaVersion != "1" || !filepath.IsAbs(state.Source) {
 			return fmt.Errorf("invalid navigation state")
 		}
 		if state.Bookmarks == nil {
 			state.Bookmarks = map[string]string{}
 		}
+	}
+	if state.IdentityBookmarks == nil {
+		state.IdentityBookmarks = map[string]configIdentityBookmark{}
+	}
+	if err := separateArtifact(*statePath, boundArtifact{Path: state.Source}); err != nil {
+		return err
 	}
 	target, err := filepath.Abs(*statePath)
 	if err != nil {
@@ -154,6 +168,27 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		missing = true
 	}
 	matches := []string{}
+	refs := []configReference{}
+	if mode == "references" || mode == "follow" {
+		if resolved != "hcl" {
+			return fmt.Errorf("reference navigation requires HCL")
+		}
+		refs, err = configReferences(data, state.Source, state.Cursor, byPath)
+		if err != nil {
+			return err
+		}
+		if mode == "follow" {
+			if reference < 1 || reference > len(refs) {
+				return fmt.Errorf("reference index out of range")
+			}
+			if refs[reference-1].Target == "" {
+				fmt.Fprintln(stderr, "Reference unavailable in this file; position unchanged.")
+				return reportError{status: finding.StatusIncomplete}
+			}
+			state.Cursor = refs[reference-1].Target
+			missing = false
+		}
+	}
 	if mode == "goto" {
 		if (path == "") == (name == "") {
 			return fmt.Errorf("goto requires exactly one of --path or --name")
@@ -161,6 +196,14 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		if name != "" {
 			var ok bool
 			path, ok = state.Bookmarks[name]
+			if identity, exists := state.IdentityBookmarks[name]; exists {
+				path, err = resolveIdentityBookmark(identity, byPath)
+				if err != nil {
+					fmt.Fprintln(stderr, err)
+					return reportError{status: finding.StatusIncomplete}
+				}
+				state.Bookmarks[name] = path
+			}
 			if !ok {
 				return fmt.Errorf("bookmark does not exist")
 			}
@@ -172,7 +215,7 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		missing = false
 	} else if !missing {
 		switch mode {
-		case "start", "show":
+		case "start", "show", "references", "follow":
 		case "parent":
 			if parent, ok := parents[state.Cursor]; ok {
 				state.Cursor = parent
@@ -201,6 +244,13 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 			if _, exists := state.Bookmarks[name]; exists {
 				return fmt.Errorf("bookmark already exists")
 			}
+			if identityKey != "" {
+				mark, err := makeIdentityBookmark(state.Cursor, identityKey, byPath)
+				if err != nil {
+					return err
+				}
+				state.IdentityBookmarks[name] = mark
+			}
 			state.Bookmarks[name] = state.Cursor
 		case "find":
 			if strings.TrimSpace(query) == "" {
@@ -220,16 +270,17 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		status = "path_missing"
 	}
 	record := struct {
-		Schema        string      `json:"schema"`
-		Status        string      `json:"status"`
-		Source        string      `json:"source"`
-		SourceSHA256  string      `json:"source_sha256"`
-		SourceChanged bool        `json:"source_changed"`
-		Cursor        string      `json:"cursor"`
-		Entry         configEntry `json:"entry"`
-		Children      []string    `json:"children"`
-		Matches       []string    `json:"matches"`
-	}{"rcdo/config-walk/v1", status, state.Source, digest, changed, state.Cursor, byPath[state.Cursor], children[state.Cursor], matches}
+		Schema        string            `json:"schema"`
+		Status        string            `json:"status"`
+		Source        string            `json:"source"`
+		SourceSHA256  string            `json:"source_sha256"`
+		SourceChanged bool              `json:"source_changed"`
+		Cursor        string            `json:"cursor"`
+		Entry         configEntry       `json:"entry"`
+		Children      []string          `json:"children"`
+		Matches       []string          `json:"matches"`
+		References    []configReference `json:"references,omitempty"`
+	}{"rcdo/config-walk/v1", status, state.Source, digest, changed, state.Cursor, byPath[state.Cursor], children[state.Cursor], matches, refs}
 	if *format == "json" {
 		if err := json.NewEncoder(stdout).Encode(record); err != nil {
 			return err
@@ -249,6 +300,9 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 				fmt.Fprintf(&out, "Source line: %d\n", entry.Line)
 			}
 		}
+		for i, ref := range refs {
+			fmt.Fprintf(&out, "Reference %d: %s; target: %s; %s\n", i+1, ref.Expression, ref.Target, ref.Status)
+		}
 		for _, p := range matches {
 			fmt.Fprintf(&out, "Match: %s\n", p)
 		}
@@ -266,5 +320,11 @@ func runConfigWalk(args []string, stdout, stderr io.Writer) error {
 		return reportError{status: finding.StatusIncomplete}
 	}
 	state.SourceSHA256 = digest
-	return saveConfigWalk(*statePath, state, mode == "start")
+	return saveWorkState(*statePath, state, previous, func() error {
+		current, err := readConfigSource(state.Source)
+		if err != nil || !bytes.Equal(current, data) {
+			return fmt.Errorf("source changed during navigation")
+		}
+		return nil
+	})
 }
