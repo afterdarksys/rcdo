@@ -128,3 +128,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Added manifest-based fleet comparison with explicit matching, differing, missing, unreachable, partial and stale evidence states. Platform-specific baselines and freshness prevent unsupported clean claims.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## report-read
+
+Added a shared reader for versioned RCDO reports with plain, speech-oriented and 40-column braille-oriented layouts, exact identifier spelling, stable-ID selection and persistent full-report risk/coverage.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

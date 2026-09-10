@@ -146,3 +146,23 @@ Values are withheld from findings. No host is counted matching on stale evidence
 Default freshness is 15 minutes for observations and 24 hours for baselines,
 configurable via `--max-age` and `--baseline-max-age`. Inputs are bounded to 16 MiB
 and 10000 hosts/observations. This command does not collect from or modify hosts.
+
+## OUT: shared accessible report reading
+
+Save any command's versioned finding JSON and read it with
+`rcdo report-read --input report.json --layout speech` (or `plain` / `braille`).
+These are text layouts for existing assistive technology, not speech synthesis
+or braille translation/device drivers. Defaults are 72, 80 and 40 columns;
+`--width` overrides with a minimum of 40. Speech uses explicit sequential labels;
+braille places labels and values on separate lines. No pager, colors or animation.
+
+`--id EXACT_FINDING_ID` reads one finding while retaining full-report status,
+severity counts and every coverage gap. `--spell id|resource` with `--id` spells
+case, digits and punctuation; other characters use exact Unicode code points.
+Text strips terminal controls and applies common-pattern secret redaction.
+Identifiers may wrap; spelling disambiguates case and punctuation. Original JSON
+is the source of exact values and should be protected as operational evidence.
+All layouts retain severity, target, environment, reason, evidence, confidence,
+next action and incomplete checks; filtering does not clear the original exit
+status. Maximum input 16 MiB; spelling limited to 2048 code points. Real device
+and screen-reader usability acceptance remains part of the workplace pilot.

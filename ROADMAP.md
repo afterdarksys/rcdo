@@ -187,7 +187,7 @@ assistive-technology acceptance. Those remain explicit follow-up work.
 - [x] NAV: resumable incident workspace with hypotheses, evidence and next actions.
 - [x] RUN: runbook progression with separate attempts, completion and verification.
 - [x] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
-- [ ] OUT: plain/speech/braille report layouts and exact identifier spelling.
+- [x] OUT: plain/speech/braille report layouts and exact identifier spelling.
 - [ ] DOC/DEM: accessibility doctor and credential-free operational practice scenarios.
 
 Already delivered in this checkout: document converters and Markdown viewer;
