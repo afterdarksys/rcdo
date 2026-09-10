@@ -377,7 +377,35 @@ Review `tofu show -json` plan output. Detect deletes, replacements, stateful-res
 
 ### `spacelift-check` (MVP available)
 
-Inspect a Spacelift JSON run snapshot for stack, commit, state, and failing policy outcomes. Compare explicit expected stack and commit values so a stale or misdirected plan is obvious. Live collection, dependency, approval, and drift adapters remain future integration work.
+Review explicit run identity, state, policy/approval evidence, freshness,
+supersession, dependency and drift observations. Bind exact plan JSON bytes to
+supplied run/commit acquisition evidence and compare stack settings with explicit
+expectations. Basic live collection queries the actual run through `spacectl api`;
+missing policy and operational evidence stays INCOMPLETE.
+
+### Expanded Spacelift and Terraform/OpenTofu workflows
+
+```sh
+rcdo tofu-check --engine terraform --plan review.tfplan
+rcdo plan-explain --input plan.json --resource module.database
+rcdo plan-diff --before reviewed-plan.json --after new-plan.json
+rcdo iac-config-check --input main.tf
+rcdo iac-validate --engine tofu --native --directory infrastructure
+rcdo iac-context --input context.json --expect expected-context.json
+rcdo spacelift-runs --input runs.json --state FAILED
+rcdo spacelift-diff --before old-run.json --after new-run.json
+rcdo spacelift-watch --stack production --run RUN_ID --samples 6 --interval 5s
+rcdo command-gen --to aws --input main.tf --region us-east-1
+rcdo command-gen --to spacelift --input stack-command.yaml --action logs
+rcdo command-gen --to terraform --input main.tf --action plan
+```
+
+Plan explanations cover replacement paths/order, unknown/sensitive values,
+resource moves/imports, output changes and security changes. Finding JSON feeds
+existing resumable navigation and bookmarks. Command generation prints recipes
+without executing them; unsupported translations remain explicit.
+
+See [schemas, workflows and coverage limitations](docs/spacelift-iac.md).
 
 ### `ansible-check` (MVP available)
 

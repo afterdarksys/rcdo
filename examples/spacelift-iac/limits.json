@@ -1,0 +1,5 @@
+{
+  "max_deletes": 1,
+  "max_replacements": 0,
+  "critical_resources": ["aws_db_instance.main"]
+}

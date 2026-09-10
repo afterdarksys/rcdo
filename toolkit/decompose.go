@@ -692,8 +692,10 @@ func shellValues(value any) []string {
 	}
 }
 
+var captureVariablePattern = regexp.MustCompile(`^\$RCDO_[A-Za-z0-9_]+$`)
+
 func shellQuote(value string) string {
-	if strings.HasPrefix(value, "$RCDO_") && !strings.ContainsAny(value, " \t\n") {
+	if captureVariablePattern.MatchString(value) {
 		return `"` + value + `"`
 	}
 	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"

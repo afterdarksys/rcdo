@@ -42,6 +42,16 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"spacelift-watch":     flagSet("format", "width", "environment"),
+	"spacelift-check":     flagSet("format", "width", "environment", "max-age"),
+	"spacelift-runs":      flagSet("format", "width", "environment", "max-age"),
+	"spacelift-diff":      flagSet("format", "width", "environment", "max-age"),
+	"plan-explain":        flagSet("format", "width", "environment"),
+	"plan-diff":           flagSet("format", "width", "environment"),
+	"iac-config-check":    flagSet("format", "width", "environment"),
+	"iac-validate":        flagSet("format", "width", "environment", "engine"),
+	"iac-context":         flagSet("format", "width", "environment", "max-age"),
+	"command-gen":         flagSet("format", "width", "to", "region", "profile"),
 	"ai-assist":           flagSet("action", "target", "domain", "max-input-bytes", "timeout"),
 	"decompose":           flagSet("format", "from", "to", "step", "width", "region", "profile"),
 	"hcl2aws":             flagSet("format", "step", "width", "region", "profile"),
@@ -60,7 +70,7 @@ var configurableFlags = map[string]map[string]bool{
 	"context":             flagSet("format", "width"),
 	"watch":               flagSet("format", "width", "environment"),
 	"jsonprobe-check":     flagSet("format", "width", "environment", "policy"),
-	"tofu-check":          flagSet("format", "width", "environment", "policy"),
+	"tofu-check":          flagSet("format", "width", "environment", "policy", "engine"),
 	"ansible-check":       flagSet("format", "width", "environment", "policy"),
 	"cloud-context-check": flagSet("format", "width", "environment", "policy"),
 }

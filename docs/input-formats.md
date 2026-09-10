@@ -70,14 +70,15 @@ tofu show -json review.tfplan | tofu-check --environment production
 
 ## Spacelift
 
-`spacelift-check` accepts a JSON run snapshot and recursively looks for these equivalent fields:
+`spacelift-check` accepts a version-1 normalized run snapshot with explicit
+account, stack/run IDs, commit, run type/state, dated source provenance, policy
+outcomes, approval requirements, latest-run identity, dependency and drift
+coverage. It no longer searches arbitrary nested objects for identity or state.
+Missing sections are INCOMPLETE. Empty arrays assert complete collection with no
+results. Commit expectations match exactly, not by prefix.
 
-- Stack: `stack_id`, `stackId`, or `stack`
-- Commit: `commit_sha`, `commitSha`, `commit`, or `head_sha`
-- State: `state` or `status`
-- Run: `run_id`, `runId`, or `id`
-
-Always pass `--expect-stack` and `--expect-commit` in deployment automation.
+See [the complete schema and collection contract](spacelift-iac.md). Always pass
+explicit `--expect-stack`, `--expect-run`, and `--expect-commit` in automation.
 
 ## Cloud identity
 

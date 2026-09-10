@@ -137,8 +137,8 @@ func TestCollectorFailureIsIncomplete(t *testing.T) {
 }
 
 func TestSpaceliftAndPRCleanSnapshots(t *testing.T) {
-	spacelift := `{"run_id":"r-1","stack_id":"prod","commit_sha":"abc123","state":"finished"}`
-	code, stdout, stderr := execute("spacelift-check", []string{"--expect-stack", "prod", "--expect-commit", "abc123"}, spacelift)
+	spacelift := jsonFixture(cleanSpaceFixture())
+	code, stdout, stderr := execute("spacelift-check", []string{"--expect-stack", "prod", "--expect-commit", strings.Repeat("a", 40)}, spacelift)
 	if code != 0 || !strings.Contains(stdout, "REVIEW RESULT: CLEAN") || stderr != "" {
 		t.Fatalf("spacelift code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}

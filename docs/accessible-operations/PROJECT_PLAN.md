@@ -91,7 +91,10 @@ Planned after Release A.
 
 ## Workstream 5: infrastructure change consequences (IAC)
 
-Planned after Release A, reusing tfchanges and tofu-check.
+Implemented RCDO extension: replacement explanations, unknown/sensitive handling,
+plan comparisons, impact limits, configuration references, native validation and
+context expectations. See [workflow and limitations](../spacelift-iac.md).
+Provider-specific interpretation and authenticated acquisition remain integration work.
 - Explain replacement paths, lifecycle order, unknown values, moved resources,
   backend/workspace/provider changes, and config-derived dependents.
 - Compare IAM/RAM principals, actions, resources and conditions; never claim
@@ -116,7 +119,10 @@ Planned after Release A.
 
 ## Workstream 7: actual Spacelift run tracking (SPC)
 
-Planned after Release A, extending the existing snapshot checker.
+Implemented RCDO extension: explicit normalized snapshots, actual-run core
+collection, policy/approval and dependency/drift checks, supplied plan binding,
+run comparisons, bounded polling and command generation. Full live operational
+collection and account-specific acceptance remain integration work.
 - Read-only adapter captures stack/run IDs, run type, revision, phase, policy
   outcomes and outstanding requirements, with time and source provenance.
 - Bind the reviewed plan to the actual run; show supersession by a newer run.

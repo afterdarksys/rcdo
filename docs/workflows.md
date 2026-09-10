@@ -45,7 +45,7 @@ rcdo spacelift-check \
   --environment production
 ```
 
-This uses `spacectl stack show --output json --no-color`. It does not confirm, approve, discard, or deploy a run.
+This uses a fixed read-only `spacectl api` query for the actual run. Basic live collection lacks policy, approval and other operational evidence and therefore returns INCOMPLETE. Supply normalized snapshots for full review. See [expanded workflows](spacelift-iac.md) for schemas, binding, comparisons, watch and command generation.
 
 ## Cloud identity gate
 
