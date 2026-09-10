@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"log-read",
 	"markdown-view", "to-markdown",
 	"spacelift-watch", "iac-config-check", "command-gen", "plan-explain", "plan-diff", "iac-validate", "iac-context", "spacelift-runs", "spacelift-diff",
 	"a11y-output-check", "ai-assist", "ansible-check", "ansible2ali", "ansible2aws", "cloud-context-check", "config", "config-diff", "config-explain", "config-remove", "config-set", "config-walk", "receipt-review", "decompose", "deploy-review", "diff-walk", "error-explain", "evidence-pack", "gha-tool",
@@ -57,6 +58,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "log-read":
+		err = runLogRead(args, stdin, stdout, stderr)
 	case "markdown-view":
 		err = runMarkdownView(args, stdin, stdout, stderr)
 	case "to-markdown":

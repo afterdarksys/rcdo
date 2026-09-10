@@ -172,3 +172,26 @@ Milestones are dependency-ordered, not calendar promises. Every implementation
 turn updates [delivery status](docs/accessible-operations/STATUS.md) with executable
 checks and remaining scope. The roadmap is not complete until all acceptance
 criteria, including the operator's workplace pilot, are met.
+
+## RCDO delivery batch — September 2026
+
+This checkout tracks the following RCDO features independently of upstream
+collector work. Each feature is delivered in its own tested commit, with schemas,
+commands and limitations in [feature workflows](docs/roadmap-features.md).
+Offline artifact workflows do not imply complete live collection or workplace
+assistive-technology acceptance. Those remain explicit follow-up work.
+
+- [x] LOG: bounded log investigation, search, grouping and saved navigation.
+- [ ] CTX: one cross-tool context summary with required observations and expectations.
+- [ ] REL: evidence-labelled dependency navigation and missing-coverage detection.
+- [ ] NAV: resumable incident workspace with hypotheses, evidence and next actions.
+- [ ] RUN: runbook progression with separate attempts, completion and verification.
+- [ ] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
+- [ ] OUT: plain/speech/braille report layouts and exact identifier spelling.
+- [ ] DOC/DEM: accessibility doctor and credential-free operational practice scenarios.
+
+Already delivered in this checkout: document converters and Markdown viewer;
+IaC replacement/sensitivity/comparison checks; normalized Spacelift policy,
+dependency/drift review and core run collection. Earlier planned IAC/SPC entries
+refer to remaining cross-tool acquisition and live integration, not absence of
+these RCDO features.

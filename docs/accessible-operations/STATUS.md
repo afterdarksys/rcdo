@@ -92,3 +92,9 @@ Implemented: `markdown-view` reads structured Markdown with section navigation,
 search, labelled table rows, persistent bookmarks and exact-source freshness.
 Full tests, vet, build and converter-to-viewer smoke checks passed. See
 ../markdown-viewer.md. Assistive-technology acceptance is still pending.
+
+## log-read
+
+Implemented bounded text/JSONL log grouping, source-line search, request/time filters, context and fingerprint-bound reading/bookmarks. Source text remains intact; missing timestamps during time filtering are incomplete.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
