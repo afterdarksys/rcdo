@@ -2,6 +2,8 @@ package toolkit
 
 import (
 	"bytes"
+	"compress/bzip2"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -34,6 +36,39 @@ type logState struct {
 	Filter        logFilter      `json:"filter"`
 	Cursor        int            `json:"cursor"`
 	Bookmarks     map[string]int `json:"bookmarks"`
+}
+
+// Decode only after binding the original bytes, so recompression or rotation
+// invalidates saved navigation even when the decoded text is unchanged.
+func decodeLog(data []byte) ([]byte, error) {
+	if len(data) > 16<<20 {
+		return nil, fmt.Errorf("log input exceeds 16 MiB")
+	}
+	var reader io.Reader
+	compression := ""
+	switch {
+	case bytes.HasPrefix(data, []byte{0x1f, 0x8b}):
+		compression = "gzip"
+		gz, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return nil, fmt.Errorf("invalid gzip log")
+		}
+		defer gz.Close()
+		reader = gz
+	case bytes.HasPrefix(data, []byte("BZh")):
+		compression = "bzip2"
+		reader = bzip2.NewReader(bytes.NewReader(data))
+	default:
+		return data, nil
+	}
+	decoded, err := io.ReadAll(io.LimitReader(reader, (8<<20)+1))
+	if len(decoded) > 8<<20 {
+		return nil, fmt.Errorf("decoded log exceeds 8 MiB")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("invalid or incomplete %s log", compression)
+	}
+	return decoded, nil
 }
 
 func parseLog(data []byte, syntax string) ([]logEvent, error) {
@@ -127,7 +162,7 @@ func runLogRead(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 	}
 	fs := flag.NewFlagSet("log-read "+mode, flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	input := fs.String("input", "-", "bounded log artifact; stdin in summary mode")
+	input := fs.String("input", "-", "text, gzip, or bzip2 log (auto-detected); stdin in summary mode")
 	syntax := fs.String("syntax", "text", "text or jsonl")
 	statePath := fs.String("state", ".rcdo-log.json", "saved reading state")
 	format := fs.String("format", "text", "text or json")
@@ -156,7 +191,7 @@ func runLogRead(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 			return fmt.Errorf("start requires a file")
 		}
 		if *input == "-" {
-			data, err = io.ReadAll(io.LimitReader(stdin, 8<<20+1))
+			data, err = io.ReadAll(io.LimitReader(stdin, (16<<20)+1))
 		} else {
 			state.Source, data, err = captureArtifact(*input)
 		}
@@ -184,6 +219,11 @@ func runLogRead(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 			return reportError{status: finding.StatusIncomplete}
 		}
 	}
+	sourceSHA := digestBytes(data)
+	data, err = decodeLog(data)
+	if err != nil {
+		return err
+	}
 	events, err := parseLog(data, state.Syntax)
 	if err != nil {
 		return err
@@ -207,7 +247,7 @@ func runLogRead(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 		} `json:"groups,omitempty"`
 		Events []logEvent `json:"events,omitempty"`
 		Cursor int        `json:"cursor,omitempty"`
-	}{SchemaVersion: "1", SHA256: digestBytes(data), Total: len(events), Matched: len(indexes), Unknown: unknown}
+	}{SchemaVersion: "1", SHA256: sourceSHA, Total: len(events), Matched: len(indexes), Unknown: unknown}
 	if mode == "summary" {
 		positions := map[string]int{}
 		for _, i := range indexes {

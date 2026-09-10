@@ -96,6 +96,7 @@ Full tests, vet, build and converter-to-viewer smoke checks passed. See
 ## log-read
 
 Implemented bounded text/JSONL log grouping, source-line search, request/time filters, context and fingerprint-bound reading/bookmarks. Source text remains intact; missing timestamps during time filtering are incomplete.
+Native gzip/bzip2 detection supports files, stdin, concatenated streams, and saved navigation. Decoding enforces an 8 MiB limit and rejects corrupt or incomplete streams before results or state are written.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
 

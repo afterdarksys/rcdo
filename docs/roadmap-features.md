@@ -9,6 +9,9 @@ All schemas use explicit source identity, timestamps and coverage where applicab
 
 ```
 rcdo log-read --input app.log --query error
+rcdo log-read --input app.log.gz --query error
+rcdo log-read --input app.log.bz2 --query error
+cat app.log.gz | rcdo log-read --query error
 rcdo log-read --input events.jsonl --syntax jsonl --request req-42
 rcdo log-read --input events.jsonl --syntax jsonl --since 2026-09-10T12:00:00Z
 rcdo log-read start --input app.log --query error --state log-reading.json
@@ -32,8 +35,16 @@ this is not guaranteed detection of arbitrary secrets. Search operates on displa
 message text. Reading persists filters, exact source bytes, cursor and bookmarks.
 Changed/rotated evidence returns 30 without changing state. Goto accepts a matched
 `--line` or `--name`; show/next/previous include up to 20 adjacent events. Input is
-bounded to 8 MiB, 100000 lines and 64 KiB per line. No live tail or heuristic
+bounded to 16 MiB of source bytes, 8 MiB of decoded text, 100000 lines and 64 KiB per line. No live tail or heuristic
 stack-trace joining occurs. All commands support `--format json` and `--width`.
+
+Gzip and bzip2 are detected from their headers for both files and stdin, without
+external commands. Both support concatenated streams and text or JSONL content;
+use `--syntax jsonl` for JSONL. Corrupt, truncated, or oversized decoded logs fail
+without emitting partial results or saving navigation. Compressed files support
+the same start, navigation, and bookmark commands as plain files. Line numbers
+refer to decoded text; the JSON `sha256` and saved source binding identify the
+original input bytes. Recompressing a source requires a new reading state.
 
 ## CTX: cross-tool context summary
 
