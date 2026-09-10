@@ -95,6 +95,25 @@ Explicit options still win:
 rcdo config-explain --input service.yaml --width 100
 ```
 
+The newer operator commands also load defaults, including compressed-log reading,
+Markdown conversion/viewing, context/resource/fleet reviews, incident/runbook
+navigation, report reading, doctor, collect, changes, Kubernetes/Ansible reviews,
+state navigation, network checks, tasks, and config-walk. Subcommands retain their
+position before flags. For example:
+
+```sh
+rcdo config set --key commands.log-read.context --value 3
+rcdo config set --key commands.log-read.format --value json
+rcdo config set --key commands.report-read.layout --value braille
+rcdo config set --key commands.to-markdown.table-mode --value records
+rcdo config set --key commands.network-check.timeout --value 15s
+rcdo config set --key commands.tasks.registry --value /path/to/tasks.json
+```
+
+Only supported defaults are accepted. Network targets, expected account identity,
+native execution switches, evidence inputs/outputs, and workflow actions remain
+explicit command-line choices. Saved readers retain their bound source and filters.
+
 Decomposition aliases inherit settings under `commands.decompose`. For example:
 
 ```sh

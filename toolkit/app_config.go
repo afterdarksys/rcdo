@@ -42,6 +42,24 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"log-read":            flagSet("format", "width", "syntax", "context", "max-groups", "state"),
+	"markdown-view":       flagSet("format", "width", "toc", "state"),
+	"to-markdown":         flagSet("from", "table-mode", "delimiter", "header", "sheet"),
+	"context-summary":     flagSet("format", "width", "environment", "max-age"),
+	"resource-walk":       flagSet("format", "width", "environment", "direction", "depth", "max-age"),
+	"incident":            flagSet("format", "width", "state", "limit"),
+	"runbook":             flagSet("format", "width", "state", "max-age"),
+	"fleet-check":         flagSet("format", "width", "environment", "max-age", "baseline-max-age"),
+	"report-read":         flagSet("width", "layout"),
+	"doctor":              flagSet("format", "width", "environment", "sample"),
+	"collect":             flagSet("kind", "region", "profile", "max-pages"),
+	"changes":             flagSet("format", "width", "environment", "kind", "max-age", "baseline-max-age"),
+	"kube-explain":        flagSet("format", "width", "environment", "max-age"),
+	"ansible-watch":       flagSet("format", "width", "environment", "max-age"),
+	"state-walk":          flagSet("format", "width", "state", "limit"),
+	"network-check":       flagSet("format", "width", "environment", "timeout", "min-valid-for", "expect-status"),
+	"tasks":               flagSet("format", "width", "registry"),
+	"config-walk":         flagSet("format", "width", "state"),
 	"spacelift-watch":     flagSet("format", "width", "environment"),
 	"spacelift-check":     flagSet("format", "width", "environment", "max-age"),
 	"spacelift-runs":      flagSet("format", "width", "environment", "max-age"),
@@ -209,6 +227,11 @@ func applyConfiguredDefaults(command string, args []string, explicitPath string)
 		}
 		prefix = append(prefix, "--"+key+"="+value)
 	}
+	// Subcommands must remain first: these readers consume the mode before flags.
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		out := append([]string{args[0]}, prefix...)
+		return append(out, args[1:]...), nil
+	}
 	return append(prefix, args...), nil
 }
 
@@ -216,9 +239,12 @@ func normalizeConfigFlag(value string) string {
 	return strings.ReplaceAll(strings.TrimSpace(value), "_", "-")
 }
 func hasCLIFlag(args []string, name string) bool {
-	prefix := "--" + name
 	for _, arg := range args {
-		if arg == prefix || strings.HasPrefix(arg, prefix+"=") {
+		if arg == "--" {
+			break
+		}
+		flagName := strings.TrimPrefix(strings.TrimPrefix(arg, "-"), "-")
+		if strings.HasPrefix(arg, "-") && (flagName == name || strings.HasPrefix(flagName, name+"=")) {
 			return true
 		}
 	}
