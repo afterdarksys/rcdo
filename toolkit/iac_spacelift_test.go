@@ -213,7 +213,7 @@ func TestSecurityChanges(t *testing.T) {
 	policy := `{"Statement":[{"Effect":"Deny","Action":"s3:*","Resource":"*"}]}`
 	input := map[string]any{"format_version": "1.0", "resource_changes": []any{map[string]any{"address": "aws_iam_policy.main", "type": "aws_iam_policy", "change": map[string]any{"actions": []string{"create"}, "after": map[string]any{"policy": policy}}}}}
 	code, out, _ := execute("tofu-check", nil, jsonFixture(input))
-	if code != 20 || !strings.Contains(out, "Policy clause added") || !strings.Contains(out, "Deny") {
+	if code != 20 || !strings.Contains(out, "Deny clause added") || !strings.Contains(out, "Deny") {
 		t.Fatalf("%d %s", code, out)
 	}
 }

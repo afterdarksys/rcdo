@@ -54,3 +54,30 @@ emits per-poll timestamp, messages, pause state, queue count, drops and gaps. Te
 uses ordinary new lines, without terminal redraws. Ctrl-C ends a follower; polling
 is otherwise bounded by `--duration` (maximum 24 hours). Concurrent state changes
 are guarded; if a conflicting writer wins, restart the follower from saved state.
+
+## 3. Permission and network scope changes
+
+```
+rcdo permission-diff --kind aws --before old-policy.json --after new-policy.json
+rcdo permission-diff --kind ram --before old-policy.json --after new-policy.json
+rcdo permission-diff --kind network --before old-rules.json --after new-rules.json
+```
+
+AWS/RAM policy documents use `Statement`, `Effect`, `Action`/`NotAction`,
+`Resource`/`NotResource`, optional principals and conditions. Action/resource
+array ordering and statement labels do not create changes. Added Allow and removed
+Deny clauses are high-risk potential expansions; added Deny and removed Allow
+are restrictions to review. Conditions and complements remain attached to their
+clauses and yield incomplete effective-access coverage. Terraform/OpenTofu plan
+security review uses this explanation for known, nonsensitive policy changes.
+
+Network documents use `schema_version: "1"` and `rules`, each with unique `id`,
+`direction` (`ingress`/`egress`), `protocol` (`tcp`/`udp`/`all`), `from_port`,
+`to_port`, and `cidr`. All-protocol rules require bounds 0..65535. IDs bind before
+and after rules; prefix and port containment distinguish broadening/narrowing.
+Other changes retain both complete scopes. ICMP, service action catalogs,
+effective-policy evaluation and native cloud rule normalization are not inferred.
+
+Semantics follow [AWS policy evaluation](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic.html)
+and [RAM policy elements](https://www.alibabacloud.com/help/en/ram/policy-elements).
+Other policies, conditions, routing and firewalls can change the final outcome.

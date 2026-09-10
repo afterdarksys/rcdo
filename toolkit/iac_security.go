@@ -91,20 +91,8 @@ func reviewSecurity(r *finding.Report, res iacResource, env string) {
 			if isMarked(bs) || isMarked(as) || isSensitivePath(path) {
 				return
 			}
-			before, after := policyAtoms(b), policyAtoms(a)
-			if before == nil || after == nil {
+			if err := explainPermissionDelta(r, permissionJSON(b), permissionJSON(a), res.Address, env); err != nil {
 				r.IncompleteChecks = append(r.IncompleteChecks, res.Address+": policy semantics unavailable at "+path)
-				return
-			}
-			for _, k := range sortedKeys(after) {
-				if _, ok := before[k]; !ok {
-					addIAC(r, "TOFU-PERMISSION", finding.SeverityHigh, "Policy clause added", res.Address, actions, env, "Attribute: "+path+"; "+redactAIText(k))
-				}
-			}
-			for _, k := range sortedKeys(before) {
-				if _, ok := after[k]; !ok {
-					addIAC(r, "TOFU-PERMISSION", finding.SeverityWarning, "Policy clause removed", res.Address, actions, env, "Attribute: "+path+"; "+redactAIText(k))
-				}
 			}
 		}
 	}
