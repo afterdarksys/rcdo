@@ -269,3 +269,13 @@ and the combined six-case starter suite.
 hashes, before/after allow/status, and added/removed/changed findings. Tests cover
 new denials, removed restrictions, detail changes, unchanged denials and undefined
 decisions. Comparisons establish behavior only for the supplied cases.
+
+`policy-review` combines existing saved-plan checks and Rego against identical
+bytes, retaining each check's status, namespaced findings, incomplete coverage,
+and artifact hashes. Tests cover independent blockers, malformed plans, unavailable
+OPA, audit capture and report-reader compatibility. These four policy features do
+not change the outstanding real assistive-technology and authenticated pilot work.
+
+Batch verification: `go test ./...`, `go vet ./...`, `make build`, and the five
+built-binary scenarios in `scripts/policy-workflows-practice.py` passed locally
+with OPA. Native OPA integration tests skip when the optional CLI is unavailable.

@@ -621,3 +621,6 @@ Actual assistive-technology and authenticated cloud acceptance remain separate.
 Local Rego policies: `rcdo rego-check --rego rules.rego --input config.json`.
 Requires OPA 1.x on PATH. See docs/rego.md and examples/rego/terraform.rego for
 structured decisions, CI exit codes, restricted builtins, and plan checks.
+Policy workflow batch: rego-test runs fixture suites, rego-diff compares policy
+versions, and policy-review combines IaC and Rego results. Five starter safeguards
+and complete usage are in docs/policy-workflows.md.

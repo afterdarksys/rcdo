@@ -101,3 +101,51 @@ Reports retain case and module hashes. Safe configuration defaults match
 `rego-test`; normal audit logging applies. This is a comparison over supplied
 examples, not a proof that two policies are equivalent for all possible inputs.
 Finding details can contain policy-supplied values; avoid returning secrets.
+
+## Combined IaC and Rego review
+
+```sh
+rcdo policy-review --input plan.json \
+  --rego examples/rego/terraform.rego --format json
+```
+
+Export saved-plan JSON with `tofu show -json saved.tfplan` or
+`terraform show -json saved.tfplan`. `policy-review` reads JSON from a file or stdin
+and never runs an apply, refresh, or provider operation. Both checks see the same
+input bytes: existing IaC deletion/replacement, unknown values, drift, security,
+and plan-completeness checks, followed by your Rego decision. Policies must accept
+raw plan JSON; the normalized starter packs require a separate normalization step
+and cannot be directly substituted here.
+
+Optional `--limits limits.json` uses the existing `tofu-check` limits schema:
+
+```json
+{"max_deletes":0,"max_replacements":0,"critical_resources":["aws_s3_bucket.archive"]}
+```
+
+The combined standard RCDO report works with `report-read` and existing consumers.
+`completed_checks` contains a `Check iac: status=...` and a
+`Check rego: status=...` summary, with individual findings/incomplete counts.
+Findings use `iac/` and `rego/` ID prefixes; incomplete explanations identify their
+origin. Input, module, and optional limits hashes bind the report to the reviewed
+artifacts. Neither check suppresses the other; no suppression flag is accepted.
+
+Exit codes are 0 clean, 10 review, 20 blocked, 30 incomplete (takes precedence,
+while retaining known blockers), and 2 invalid arguments/JSON/files. A structurally
+invalid plan is an incomplete IaC check; Rego still evaluates valid JSON. Missing
+OPA does not remove the IaC findings. A clean report describes these checks on this
+artifact, not effective authorization or permission to deploy.
+
+`--timeout` sets the evaluation budget after local input/module loading. Built-in
+IaC review runs synchronously; OPA receives the remaining budget, or is marked
+incomplete if no budget remains. It is not a hard interrupt for Go's built-in
+analysis. Safe defaults are format, width, environment, query, and timeout.
+Configured auditing records one invocation and the combined output, including
+individual check summaries, subject to the configured redaction and output cap.
+
+## Repeatable local verification
+
+After `make build`, run `python3 scripts/policy-workflows-practice.py`. With OPA on
+PATH, it checks passing/denied starter inputs, all six fixture cases, changed
+policy decisions, and combined findings using the built executable. It uses a
+temporary config and no cloud services; it does not establish workplace usability.
