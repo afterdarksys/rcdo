@@ -184,7 +184,7 @@ assistive-technology acceptance. Those remain explicit follow-up work.
 - [x] LOG: bounded log investigation, search, grouping and saved navigation.
 - [x] CTX: one cross-tool context summary with required observations and expectations.
 - [x] REL: evidence-labelled dependency navigation and missing-coverage detection.
-- [ ] NAV: resumable incident workspace with hypotheses, evidence and next actions.
+- [x] NAV: resumable incident workspace with hypotheses, evidence and next actions.
 - [ ] RUN: runbook progression with separate attempts, completion and verification.
 - [ ] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
 - [ ] OUT: plain/speech/braille report layouts and exact identifier spelling.

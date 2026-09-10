@@ -74,3 +74,32 @@ pages succeed; RCDO cannot independently attest an unsigned artifact. Cycles are
 reported and traversal terminates. Depth is 1..10; input <=16 MiB, nodes <=10000,
 edges <=50000. Default evidence age is 15m. This implements graph review/navigation,
 not live paginated AWS/AliCloud collection or automatic relationship discovery.
+
+## NAV: resumable incident workspace
+
+```
+rcdo incident start --state incident.json --title 'Database outage'
+rcdo incident hypothesis --state incident.json --text 'Connection limit reached'
+rcdo incident evidence --state incident.json --name logs --input database.log
+rcdo incident action --state incident.json --status attempted --text 'Requested connection count'
+rcdo incident next-action --state incident.json --text 'Compare connection limit'
+rcdo incident resume --state incident.json
+rcdo incident resolve --state incident.json --id 1 --status rejected
+rcdo incident handoff --state incident.json
+```
+
+Notes, hypotheses (open/supported/rejected), next actions and attempted/completed
+operator actions persist in a timestamped timeline. They are operator statements,
+not execution receipts or proof of recovery. `next`/`previous` move a timeline
+cursor. `show`/`resume`/`handoff` show recent entries, hypotheses, current evidence
+and next action; `--limit` expands history and JSON exports all entries. No message
+is sent. Named workspace files allow independent incidents; no global registry yet.
+
+Evidence stores exact file bindings; replacing a label records a new version in
+the timeline rather than deleting the prior attachment record. Changed/unavailable
+current evidence stays visible and returns 30. Operators may still record notes
+while evidence is stale; attaching refreshed evidence replaces its current binding.
+Past versions are historical references and may no longer exist. Start refuses
+existing state; updates use optimistic guarded atomic replacement. Common secret
+patterns are redacted in operator text, not guaranteed arbitrary-secret detection.
+Timeline limit is 10000 entries; text statements are bounded single-line labels.

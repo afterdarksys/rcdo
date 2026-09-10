@@ -110,3 +110,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Implemented numbered dependency/dependent traversal with explicit observed/configuration/inferred edges, scope coverage, stale evidence, missing nodes and cycle handling.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## incident
+
+Implemented independent resumable incident workspaces with hypotheses, action records, next steps, bounded timelines and versioned evidence attachments. Stale current evidence remains visible with exit 30.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
