@@ -22,7 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
-	"rego-test", "rego-check",
+	"rego-diff", "rego-test", "rego-check",
 	"pilot",
 	"context-acquire",
 	"permission-diff",
@@ -87,6 +87,8 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "rego-diff":
+		err = runRegoDiff(args, stdout, stderr)
 	case "rego-test":
 		err = runRegoTest(args, stdout, stderr)
 	case "rego-check":

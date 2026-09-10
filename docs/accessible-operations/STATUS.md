@@ -264,3 +264,8 @@ independent verification. Automated OPA tests exercise each pack. Usage and limi
 input/module hashes. Passing expected denials are distinct from incomplete
 execution. Automated checks cover mismatches, malformed suites, missing decisions,
 and the combined six-case starter suite.
+
+`rego-diff` compares frozen policy versions on identical case inputs, retaining
+hashes, before/after allow/status, and added/removed/changed findings. Tests cover
+new denials, removed restrictions, detail changes, unchanged denials and undefined
+decisions. Comparisons establish behavior only for the supplied cases.

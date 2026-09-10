@@ -251,5 +251,5 @@ are delivered. No automated test result substitutes for the two open pilot items
 
 - [x] Five composable Rego starter safeguards with passing/failing fixtures.
 - [x] Fixture-based policy testing.
-- [ ] Before/after policy comparison on identical inputs.
+- [x] Before/after policy comparison on identical inputs.
 - [ ] Combined built-in IaC and Rego review with individual check evidence.

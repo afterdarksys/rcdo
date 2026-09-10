@@ -75,3 +75,29 @@ records input/module hashes. Module files are snapshotted once for the whole sui
 cases are explicitly marked incomplete on exhaustion. Suites are limited to 16 MiB.
 Normal audit logging captures the invocation and aggregate report. Safe defaults
 for `rego-test` are format, width, environment, query, and timeout.
+
+## Compare policy versions
+
+```sh
+rcdo rego-diff --before old.rego --after new.rego \
+  --suite cases.json --format json
+```
+
+Repeat `--before` and `--after` to compose each version from multiple modules.
+Both versions use the same `--query`, frozen suite inputs, and individually frozen
+module sets. Suite syntax is shared with `rego-test`; expectations are optional
+and do not affect comparison. Existing expectations must still be well formed.
+
+Each changed case reports before/after `allow` and report status, with added,
+removed, or changed finding details. Finding order alone is not a change.
+Unchanged behavior exits 0 even when both policies deny: this command evaluates
+policy differences, not deployment permission. Newly denied or newly blocking
+cases exit 20. Other changes, including removed restrictions, exit 10 for review.
+Undefined decisions, errors, or incomplete checks on either side exit 30 and are
+never interpreted as allowed or unchanged. Invalid arguments/suites exit 2.
+
+`--timeout` covers all before/after evaluations (default 30s, maximum 1m).
+Reports retain case and module hashes. Safe configuration defaults match
+`rego-test`; normal audit logging applies. This is a comparison over supplied
+examples, not a proof that two policies are equivalent for all possible inputs.
+Finding details can contain policy-supplied values; avoid returning secrets.
