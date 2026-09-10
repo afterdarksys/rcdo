@@ -158,3 +158,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Added explicit AWS identity and paginated EC2 inventory/attachment acquisition feeding context, fleet and resource readers. Expected account gating and identity rechecks prevent silent cross-account collection; failed pages preserve incomplete coverage.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## changes
+
+Added report and fleet snapshot comparisons with source fingerprints, persistent risk and explicit uncertainty. Finding disappearance is not recovery, missing hosts remain unknown and changed baselines cannot imply improvement.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

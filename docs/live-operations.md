@@ -30,3 +30,24 @@ tokens and truncation preserve incomplete coverage (exit 30). Successful normali
 artifacts return 0; collection does not imply that their contents satisfy a baseline.
 Times and source descriptions are recorded. Existing output files are never replaced.
 No AWS calls run as part of automated tests; fixture runners check argv and failures.
+
+## CHANGES: dated evidence comparison
+
+```sh
+rcdo changes --kind report --before old-report.json --after new-report.json
+rcdo changes --kind fleet --before old-fleet.json --after new-fleet.json
+```
+
+Report mode accepts versioned RCDO finding reports. It preserves current severity,
+labels stable IDs as new/still reported/changed, and labels absent old findings
+as no longer reported, not verified recovery. Historical and current coverage gaps
+remain explicit. Report files lack a common collection timestamp/scope contract;
+operators must select comparable reports. Source hashes identify exactly what was
+compared, and raw JSON retains evidence. Text redacts common secret patterns.
+
+Fleet mode uses existing fleet artifacts, unchanged platform/baseline definitions,
+and freshness limits (15m observation, 24h baseline by default). Matching, differing
+and unknown observations remain distinct. Newly matching required fields do not
+prove a service recovery event. Removed manifest hosts remain incomplete. Changed
+baseline requirements are rejected rather than presented as improved health.
+Artifacts are bounded to 16 MiB. No collectors, commands or remediation are launched.

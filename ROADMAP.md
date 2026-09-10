@@ -202,7 +202,7 @@ One commit per section. Native adapters are tested with controlled CLI responses
 workplace credentials and assistive-technology acceptance remain separate.
 
 - [x] COLLECT: AWS context, EC2 fleet inventory and attachment graph acquisition.
-- [ ] CHANGES: compare evidence snapshots without treating disappearance as recovery.
+- [x] CHANGES: compare evidence snapshots without treating disappearance as recovery.
 - [ ] KUBE: investigate pods, deployments and correlated events.
 - [ ] COMMAND: explain generated commands, required inputs and shell quoting.
 
