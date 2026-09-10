@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"state-walk",
 	"ansible-watch",
 	"kube-explain",
 	"changes",
@@ -69,6 +70,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "state-walk":
+		err = runStateWalk(args, stdout, stderr)
 	case "ansible-watch":
 		err = runAnsibleWatch(args, stdin, stdout, stderr)
 	case "kube-explain":

@@ -195,3 +195,9 @@ See ../live-operations.md for supported shells and scope.
 Added bounded Ansible callback receipt reading with required host coverage, per-task check mode, no_log handling and distinct failed/unreachable/skipped/changed results. An opt-in callback records no result bodies or module arguments.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## state-walk
+
+Added exact-address state show JSON navigation with parent/child/sibling traversal, search and saved bookmarks. Sensitivity masks and sensitive field names redact values; missing masks withhold resource values and changed source bytes block navigation updates.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.

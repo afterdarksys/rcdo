@@ -31,3 +31,29 @@ for finding navigation/bookmarks. RCDO never launches Ansible itself.
 
 Run callback contract tests with `python3 integrations/ansible/test_callback.py`.
 Actual Ansible-version and workplace-device acceptance remain separate.
+
+## Terraform/OpenTofu state navigation
+
+```sh
+# Export state yourself; show JSON can contain secrets. Protect this source file.
+rcdo state-walk start --input state-show.json --state navigation.json
+rcdo state-walk goto --state navigation.json --address 'module.api.aws_instance.web["blue"]'
+rcdo state-walk child --state navigation.json --index 1
+rcdo state-walk bookmark --state navigation.json --name attributes
+rcdo state-walk goto --state navigation.json --name attributes
+```
+
+Accepts [state show JSON format 1](https://opentofu.org/docs/internals/json-format/),
+not raw tfstate or plan JSON. No infrastructure CLI is invoked. `parent`, `child`,
+`next`, `previous`, `find --query` and `goto --id|--address|--name` navigate exact
+identities. Root ID is `module:`, resources use `resource:ADDRESS`, and attributes
+append `#` followed by escaped JSON-pointer segments. Search excludes values.
+
+Sensitivity masks and sensitive field names redact values in both text and JSON.
+Missing/invalid resource sensitivity metadata withholds all its attributes and
+returns incomplete. Missing output sensitivity also withholds its value. This
+cannot detect every unmarked secret. Persisted navigation stores only paths,
+source hash, cursor and bookmarks. Any source byte change blocks further navigation
+with 30; start a new file to review the new version. Limits: 16 MiB source, 50000
+nodes, depth 64, 1000 bookmarks, and 4096-byte scalar display limit. Output is
+bounded with `--limit`; snapshot values do not establish current service health.
