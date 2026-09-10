@@ -166,3 +166,32 @@ All layouts retain severity, target, environment, reason, evidence, confidence,
 next action and incomplete checks; filtering does not clear the original exit
 status. Maximum input 16 MiB; spelling limited to 2048 code points. Real device
 and screen-reader usability acceptance remains part of the workplace pilot.
+
+## DOC/DEM: local doctor and operational practice
+
+`rcdo doctor --sample --evidence-dir ./evidence` observes optional CLIs on PATH,
+nonempty pager/color/prompt environment settings (values withheld), and an explicit
+temporary-file create/write/read/delete probe in an existing directory. It does
+not read credential files or edit settings. Missing optional tools return review
+(10); failed requested probes return incomplete (30). Unset environment variables
+do not establish external CLI defaults or config-file behavior.
+
+`--versions` explicitly runs allowlisted version commands for installed Git,
+OpenTofu, Terraform, AWS CLI, Pandoc and pdftotext. Other detected tools are labelled
+unqueried. Version commands are local executable invocations with the existing
+bounded, timed adapter runner; raw failure diagnostics are withheld. The report
+states observed output, not a tested compatibility range. Default doctor performs
+no CLI invocation. Sample output asks the operator to verify reading/navigation;
+it never declares a screen reader, magnifier or braille device compatible.
+
+After `make build`, run `python3 scripts/accessible-practice.py`. It uses only local
+RCDO artifact commands and Python's standard library. Fixtures, numbered transcripts
+and machine-readable expected/actual exits remain in a private temporary directory.
+Scenarios cover wrong account and correction, repeated logs, interrupted incident
+reading, changed evidence, missing graph regions, incomplete fleet rollout and
+correction, all report layouts, failed health checks, completion versus verification,
+changed verification artifacts, database replacement and stale plan bindings.
+Every recovery is synthetic. Regenerate fixtures when timestamps expire. The
+[operator pilot worksheet](accessible-operations/PILOT.md) records actual usability
+results separately from automated checks. Earlier engineering demos remain valid;
+these scenarios do not claim full remote execution or collector acceptance.

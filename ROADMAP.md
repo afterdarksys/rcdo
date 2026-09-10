@@ -188,7 +188,7 @@ assistive-technology acceptance. Those remain explicit follow-up work.
 - [x] RUN: runbook progression with separate attempts, completion and verification.
 - [x] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
 - [x] OUT: plain/speech/braille report layouts and exact identifier spelling.
-- [ ] DOC/DEM: accessibility doctor and credential-free operational practice scenarios.
+- [x] DOC/DEM: accessibility doctor and credential-free operational practice scenarios.
 
 Already delivered in this checkout: document converters and Markdown viewer;
 IaC replacement/sensitivity/comparison checks; normalized Spacelift policy,

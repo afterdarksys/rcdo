@@ -571,3 +571,21 @@ structural navigation. Use `show`, `parent`, `child`, `next`, `previous`, `find`
 `--format json` retains exact paths. Changed source versions are announced and
 missing paths require explicit relocation. See docs/accessible-operations/DEMO.md
 for the offline cross-tool demonstration and current limitations.
+
+## Accessible investigation workflows
+
+The [roadmap feature guide](docs/roadmap-features.md) documents `log-read`,
+`context-summary`, `resource-walk`, `incident`, `runbook`, `fleet-check`,
+`report-read` and `doctor`, including input schemas and evidence limitations.
+Each has a separate feature commit. Start with credential-free practice:
+
+```sh
+make build
+python3 scripts/accessible-practice.py
+rcdo doctor --sample
+rcdo report-read --input report.json --layout braille
+```
+
+The practice runner retains synthetic fixtures and transcripts. Live collection
+coverage and actual assistive-technology acceptance remain explicit follow-ups in
+[ROADMAP.md](ROADMAP.md) and the [pilot worksheet](docs/accessible-operations/PILOT.md).

@@ -134,3 +134,21 @@ Live integration and assistive-technology acceptance are not asserted.
 Added a shared reader for versioned RCDO reports with plain, speech-oriented and 40-column braille-oriented layouts, exact identifier spelling, stable-ID selection and persistent full-report risk/coverage.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## doctor
+
+Added local accessibility diagnostics and synthetic operational practice scenarios. Optional CLIs, environment settings, storage checks and operator reading samples report their individual scope; no automated accessibility certification is claimed.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
+
+### September 2026 batch validation
+
+- `go test ./...`: passed across all packages.
+- `go vet ./...`: passed.
+- `make build`: passed, including command aliases.
+- `python3 scripts/accessible-practice.py`: 29 expected-exit checks passed;
+  synthetic fixtures, numbered transcripts and results.json retained locally.
+- Focused tests cover evidence changes, incomplete coverage, wrong identity,
+  large integer comparison, terminal control removal and step verification gates.
+- Workplace assistive-technology pilot: not run. Live cross-tool collector
+  integration and authenticated outcome attestation remain follow-up work.
