@@ -1,0 +1,18 @@
+{
+  "environment": "development",
+  "approved": false,
+  "resources": [
+    {
+      "address": "example.bucket",
+      "tags": {
+        "Owner": "platform",
+        "Environment": "development"
+      },
+      "region": "eu-west-1",
+      "public": false,
+      "actions": [
+        "create"
+      ]
+    }
+  ]
+}

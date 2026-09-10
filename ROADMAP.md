@@ -246,3 +246,10 @@ are delivered. No automated test result substitutes for the two open pilot items
 - [x] Local Rego evaluation through OPA, structured decisions and CI exit codes,
   restricted builtins, input/module hashes, and a Terraform/OpenTofu plan example.
   See [Rego usage](docs/rego.md).
+
+## Policy workflow batch
+
+- [x] Five composable Rego starter safeguards with passing/failing fixtures.
+- [ ] Fixture-based policy testing.
+- [ ] Before/after policy comparison on identical inputs.
+- [ ] Combined built-in IaC and Rego review with individual check evidence.

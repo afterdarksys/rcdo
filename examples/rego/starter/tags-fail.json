@@ -1,0 +1,15 @@
+{
+  "environment": "development",
+  "approved": false,
+  "resources": [
+    {
+      "address": "example.bucket",
+      "tags": {},
+      "region": "us-east-1",
+      "public": false,
+      "actions": [
+        "create"
+      ]
+    }
+  ]
+}

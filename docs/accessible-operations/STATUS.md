@@ -252,3 +252,10 @@ never certify device usability. Final validation:
 - No remote hosts, cloud resources, platform approvals or assistive-technology
   settings were changed. Actual AT and authenticated cloud/Spacelift/Docker pilot
   results remain pending; no operator pass was generated.
+
+## Policy workflow batch
+
+Five Rego starter safeguards and passing/failing normalized input examples are
+available. Missing facts are incomplete; supplied approval/public flags are not
+independent verification. Automated OPA tests exercise each pack. Usage and limits:
+[policy workflows](../policy-workflows.md).
