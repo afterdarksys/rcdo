@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"fleet-check",
 	"runbook",
 	"incident",
 	"resource-walk",
@@ -62,6 +63,8 @@ func Run(command string, args []string, stdin io.Reader, stdout, stderr io.Write
 		}
 	}
 	switch command {
+	case "fleet-check":
+		err = runFleetCheck(args, stdin, stdout, stderr)
 	case "runbook":
 		err = runRunbookWalk(args, stdout, stderr)
 	case "incident":

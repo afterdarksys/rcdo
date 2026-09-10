@@ -186,7 +186,7 @@ assistive-technology acceptance. Those remain explicit follow-up work.
 - [x] REL: evidence-labelled dependency navigation and missing-coverage detection.
 - [x] NAV: resumable incident workspace with hypotheses, evidence and next actions.
 - [x] RUN: runbook progression with separate attempts, completion and verification.
-- [ ] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
+- [x] FLE: manifest-based fleet comparison leading with exceptions and unknown hosts.
 - [ ] OUT: plain/speech/braille report layouts and exact identifier spelling.
 - [ ] DOC/DEM: accessibility doctor and credential-free operational practice scenarios.
 

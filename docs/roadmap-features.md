@@ -128,3 +128,21 @@ unsigned evidence, not independently authenticated observations. Text stop
 conditions guide operators; required check results provide the enforceable gates.
 Default max age is 15m. Maximum 1000 steps. JSON retains the runbook/progress and
 verification report; protect these files as operational evidence.
+
+## FLE: fleet exceptions and coverage
+
+`rcdo fleet-check --input fleet.json` compares required manifest hosts with supplied
+observations. Input schema_version is `1`, with `complete` boolean, `hosts` array
+of `{id, platform, baseline}`, `baselines` object keyed by baseline ID, and
+`observations` array. Each baseline supplies `platform`, nonempty `values` object,
+`source`, and RFC3339 `collected_at`. Each observation supplies `host`, `platform`,
+`outcome` (`pass`, `unreachable`, `error`), `values`, `source`, and `collected_at`.
+
+Comparisons use exact JSON values for required baseline fields; extra observed
+fields are ignored. Different platforms cannot share an incompatible baseline.
+Missing fields/hosts, partial collection, unknown sources and unreachable hosts
+remain incomplete (30); differences are findings (10, or 20 for wrong platform).
+Values are withheld from findings. No host is counted matching on stale evidence.
+Default freshness is 15 minutes for observations and 24 hours for baselines,
+configurable via `--max-age` and `--baseline-max-age`. Inputs are bounded to 16 MiB
+and 10000 hosts/observations. This command does not collect from or modify hosts.

@@ -122,3 +122,9 @@ Live integration and assistive-technology acceptance are not asserted.
 Implemented ordered runbook reading, attempted/completed operator records and fresh runbook/step/target-bound verification before advancing. Failed or missing checks preserve stop conditions; instructions are never executed.
 Validation: focused regression tests; see ../roadmap-features.md for scope.
 Live integration and assistive-technology acceptance are not asserted.
+
+## fleet-check
+
+Added manifest-based fleet comparison with explicit matching, differing, missing, unreachable, partial and stale evidence states. Platform-specific baselines and freshness prevent unsupported clean claims.
+Validation: focused regression tests; see ../roadmap-features.md for scope.
+Live integration and assistive-technology acceptance are not asserted.
