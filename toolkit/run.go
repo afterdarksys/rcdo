@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"monitor",
 	"audit",
 	"tasks",
 	"network-check",
@@ -82,6 +83,8 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "monitor":
+		err = runMonitor(args, stdout, stderr)
 	case "audit":
 		err = runAudit(args, configPath, stdout, stderr)
 	case "tasks":
