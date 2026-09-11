@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Demonstrate extraction -> filtering, while preserving extraction errors.
+set -euo pipefail
+if [[ ${1:-} == --help || ${1:-} == -h ]]; then
+  echo 'Usage: pdfgrep PATTERN [PDF ...]'
+  echo 'Search extracted PDF text with a case-insensitive extended regular expression.'
+  echo "Omit PDFs or use '-' to read PDF bytes from stdin."
+  exit 0
+fi
+if (( $# < 1 )); then
+  echo 'Usage: pdfgrep PATTERN [PDF ...]' >&2
+  exit 2
+fi
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+pattern=$1
+shift
+if (( $# == 0 )); then set -- -; fi
+temp_file=$(mktemp)
+trap 'rm -f -- "$temp_file"' EXIT
+found=1
+for pdf in "$@"; do
+  "$script_dir/pdfsee" "$pdf" text > "$temp_file"
+  printf '\n== %s ==\n' "$pdf"
+  if grep -niE -- "$pattern" "$temp_file"; then
+    found=0
+  else
+    status=$?
+    if (( status != 1 )); then exit "$status"; fi
+  fi
+done
+exit "$found"

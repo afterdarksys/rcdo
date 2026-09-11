@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Inspect an image, preview it as ASCII, or save a thumbnail."""
+import argparse
+import io
+import json
+import sys
+from pathlib import Path
+
+
+def positive(value):
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be positive")
+    return number
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("image", type=Path, help="image file, or '-' for binary stdin")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("info", help="emit image metadata as JSON")
+    preview = commands.add_parser("ascii", help="print a grayscale terminal preview")
+    preview.add_argument("--width", type=positive, default=80)
+    preview.add_argument("--invert", action="store_true", help="reverse brightness mapping")
+    thumb = commands.add_parser("thumb", help="save a thumbnail without enlarging")
+    thumb.add_argument("output", type=Path, help="output file, or '-' for binary stdout (PNG)")
+    thumb.add_argument("--size", type=positive, default=320)
+    args = parser.parse_args()
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        parser.exit(1, "imgsee: Pillow is required; run: python3 -m pip install -r requirements.txt\n")
+    try:
+        source = io.BytesIO(sys.stdin.buffer.read()) if str(args.image) == "-" else args.image
+        with Image.open(source) as original:
+            img = ImageOps.exif_transpose(original)
+            if args.command == "info":
+                print(json.dumps({"path": str(args.image), "format": original.format,
+                                  "width": img.width, "height": img.height,
+                                  "mode": img.mode, "frames": getattr(original, "n_frames", 1)}))
+            elif args.command == "ascii":
+                rgba = img.convert("RGBA")
+                background = Image.new("RGBA", rgba.size, "white")
+                background.alpha_composite(rgba)
+                height = max(1, round(img.height / img.width * args.width * 0.5))
+                gray = background.convert("L").resize((args.width, height))
+                ramp = " .:-=+*#%@"
+                if args.invert:
+                    ramp = ramp[::-1]
+                pixels = list(gray.getdata())
+                for row in range(height):
+                    print("".join(ramp[p * (len(ramp) - 1) // 255]
+                                  for p in pixels[row * args.width:(row + 1) * args.width]))
+            else:
+                img.thumbnail((args.size, args.size))
+                if str(args.output) == "-":
+                    img.save(sys.stdout.buffer, format="PNG")
+                    return
+                if args.output.suffix.lower() in (".jpg", ".jpeg"):
+                    rgba = img.convert("RGBA")
+                    background = Image.new("RGBA", rgba.size, "white")
+                    background.alpha_composite(rgba)
+                    img = background.convert("RGB")
+                # Exclusive creation protects the source and existing output files.
+                with args.output.open("xb") as output:
+                    try:
+                        img.save(output, format=Image.registered_extensions()[args.output.suffix.lower()])
+                    except Exception:
+                        args.output.unlink()
+                        raise
+                print(args.output)
+    except (OSError, ValueError, KeyError, Image.DecompressionBombError) as exc:
+        parser.exit(1, f"imgsee: {exc}\n")
+
+
+if __name__ == "__main__":
+    main()

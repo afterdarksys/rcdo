@@ -1,0 +1,3 @@
+The shell helps us see patterns.
+Pipes turn text into insight. Text becomes a picture of patterns.
+See the text, see the patterns, explore the shell.

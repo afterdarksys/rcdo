@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""Inspect PDFs, extract text, or extract embedded images using Poppler."""
+import argparse
+import shutil
+import subprocess
+from pathlib import Path
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("pdf", type=Path, help="PDF file, or '-' for binary stdin")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("info", help="print document metadata")
+    commands.add_parser("text", help="write layout-preserving UTF-8 text to stdout")
+    images = commands.add_parser("images", help="extract embedded images into a new directory")
+    images.add_argument("output", type=Path)
+    args = parser.parse_args()
+    source = "-" if str(args.pdf) == "-" else str(args.pdf.resolve())
+    if source != "-" and not args.pdf.is_file():
+        parser.exit(1, f"pdfsee: file not found: {args.pdf}\n")
+    tool = {"info": "pdfinfo", "text": "pdftotext", "images": "pdfimages"}[args.command]
+    if shutil.which(tool) is None:
+        parser.exit(1, f"pdfsee: {tool} is missing; install Poppler (brew install poppler / apt install poppler-utils)\n")
+    if args.command == "info":
+        command = [tool, source]
+    elif args.command == "text":
+        command = [tool, "-layout", "-enc", "UTF-8", source, "-"]
+    else:
+        try:
+            args.output.mkdir(parents=True, exist_ok=False)
+        except OSError as exc:
+            parser.exit(1, f"pdfsee: {exc}\n")
+        command = [tool, "-all", source, str(args.output.resolve() / "image")]
+    try:
+        result = subprocess.run(command, check=False)
+    except OSError as exc:
+        parser.exit(1, f"pdfsee: {exc}\n")
+    if result.returncode:
+        parser.exit(1, "pdfsee: Poppler failed; any partial image output remains in the output directory\n"
+                    if args.command == "images" else "pdfsee: Poppler failed\n")
+
+
+if __name__ == "__main__":
+    main()
