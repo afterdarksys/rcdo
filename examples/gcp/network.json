@@ -1,0 +1,7 @@
+{
+  "resource": "network",
+  "name": "rcdo-app",
+  "project": "rcdo-test",
+  "account": "operator@example.com",
+  "subnet_mode": "custom"
+}

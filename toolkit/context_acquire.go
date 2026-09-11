@@ -251,7 +251,11 @@ func acquireSpaceContext(c *contextAcquirer, stack, run, expectedEndpoint string
 func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("context-acquire", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	kind := fs.String("kind", "", "docker, tofu, terraform, ansible or spacelift")
+	kind := fs.String("kind", "", "docker, tofu, terraform, ansible, spacelift or gcp")
+	project := fs.String("project", "", "expected GCP project ID")
+	principal := fs.String("expect-account", "", "expected GCP account email")
+	zone := fs.String("zone", "", "optional explicit GCP zone")
+	configuration := fs.String("configuration", "", "gcloud named configuration")
 	native := fs.Bool("native", false, "execute read-only native CLI acquisition; inventory plugins may execute locally")
 	name := fs.String("name", "", "context name in bundle")
 	output := fs.String("output", "-", "new bundle file or stdout")
@@ -266,10 +270,13 @@ func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if fs.NArg() != 0 || !*native || !oneOf(*kind, "docker", "tofu", "terraform", "ansible", "spacelift") || !operationLabel(*name) {
+	if fs.NArg() != 0 || !*native || !oneOf(*kind, "docker", "tofu", "terraform", "ansible", "spacelift", "gcp") || !operationLabel(*name) {
 		return fmt.Errorf("requires --native, --name and supported --kind")
 	}
 	complete := true
+	if *kind != "gcp" && (*project != "" || *principal != "" || *zone != "" || *configuration != "") {
+		return fmt.Errorf("GCP selectors require --kind gcp")
+	}
 	bundle := contextBundle{SchemaVersion: "1", Complete: &complete, Contexts: map[string]contextObservation{}}
 	if *merge != "" {
 		raw, err := readConfigSource(*merge)
@@ -288,6 +295,8 @@ func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	var values map[string]string
 	var err error
 	switch *kind {
+	case "gcp":
+		values, err = acquireGCP(c, gcpSelectors{Project: *project, Principal: *principal, Zone: *zone, Configuration: *configuration})
 	case "docker":
 		values, err = acquireDocker(c, *docker)
 	case "tofu", "terraform":

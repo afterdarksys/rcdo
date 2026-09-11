@@ -97,16 +97,33 @@ func collectAWSInstances(region, profile string, maxPages int) ([]collectedInsta
 func runCollect(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("collect", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	kind := fs.String("kind", "context", "context, fleet or relations; AWS adapter")
+	kind := fs.String("kind", "context", "context, fleet or relations")
+	cloud := fs.String("cloud", "aws", "aws or gcp")
+	project := fs.String("project", "", "explicit Google Cloud project ID")
+	zone := fs.String("zone", "", "explicit Google Cloud inventory zone")
+	configuration := fs.String("configuration", "", "gcloud named configuration")
+	maxInstances := fs.Int("max-instances", 1000, "GCP instance limit, 1..10000; limit overflow is incomplete")
 	region := fs.String("region", "", "explicit AWS region")
 	profile := fs.String("profile", "", "AWS profile; omitted uses CLI credential chain")
-	account := fs.String("expect-account", "", "required expected 12-digit account")
+	account := fs.String("expect-account", "", "expected AWS account ID or GCP credential account email")
 	output := fs.String("output", "-", "new JSON artifact path or - for stdout")
 	manifest := fs.String("manifest", "", "fleet bundle supplying required hosts and baselines; observations replaced")
 	pages := fs.Int("max-pages", 10, "maximum EC2 CLI pages, 1..100")
 	setAccessibleUsage(fs, "collect", stderr)
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if fs.NArg() != 0 || !oneOf(*cloud, "aws", "gcp") || !oneOf(*kind, "context", "fleet", "relations") {
+		return fmt.Errorf("invalid cloud or collection kind")
+	}
+	if *cloud == "gcp" {
+		if *region != "" || *profile != "" || hasCLIFlag(args, "max-pages") {
+			return fmt.Errorf("GCP uses --zone, --configuration and --max-instances")
+		}
+		return runGCPCollect(*kind, gcpSelectors{Project: *project, Principal: *account, Zone: *zone, Configuration: *configuration}, *maxInstances, *manifest, *output, stdout, stderr)
+	}
+	if *project != "" || *zone != "" || *configuration != "" || hasCLIFlag(args, "max-instances") {
+		return fmt.Errorf("GCP selectors require --cloud gcp")
 	}
 	if fs.NArg() != 0 || !oneOf(*kind, "context", "fleet", "relations") || !regionNamePattern.MatchString(*region) || !awsAccountID.MatchString(*account) || (*profile != "" && !profileNamePattern.MatchString(*profile)) || *pages < 1 || *pages > 100 {
 		return fmt.Errorf("collect requires --region, --expect-account and valid kind/page limit")

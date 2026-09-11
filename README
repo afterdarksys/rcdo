@@ -10,6 +10,11 @@ The intended community includes blind and low-vision DevOps engineers using scre
 
 ## Accessible operations project
 
+Native [Google Cloud support](docs/google-cloud.md) adds project/account checks,
+read-only Compute Engine fleet and attachment collection, and command previews
+for networks, subnets, buckets and service accounts. Inventory is scoped to one
+explicit project and zone; authenticated cloud acceptance remains pending.
+
 The [project plan](docs/accessible-operations/PROJECT_PLAN.md) covers all eight
 workstreams for accessible senior DevOps operations. The first implementation
 adds named AWS/AliCloud context checks, bounded Docker event review, persistent

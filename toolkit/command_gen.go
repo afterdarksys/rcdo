@@ -39,7 +39,7 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 	fs.BoolVar(&explain, "explain", false, "explain parameters, required inputs and effects")
 	fs.StringVar(&shell, "shell", "posix", "posix or powershell (PowerShell 7.3+ Standard native argument passing)")
 	fs.StringVar(&input, "input", "-", "configuration file or - for stdin")
-	fs.StringVar(&target, "to", "", "spacelift, aws, alicloud, tofu or terraform")
+	fs.StringVar(&target, "to", "", "spacelift, aws, alicloud, gcp, tofu or terraform")
 	fs.StringVar(&action, "action", "", "Spacelift: show, logs, changes, preview, deploy; IaC: validate, plan, fmt-check; cloud: create")
 	fs.StringVar(&from, "from", "auto", "cloud source: auto, hcl or ansible")
 	fs.StringVar(&format, "format", "text", "text or json")
@@ -55,6 +55,12 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 	if fs.NArg() > 0 || width < 40 || !oneOf(format, "text", "json") || !oneOf(shell, "posix", "powershell") {
 		return fmt.Errorf("invalid arguments, width or format")
 	}
+	if target == "gcp" {
+		if directory != "" || profile != "" || region != "" || step != 0 || from != "auto" || !oneOf(action, "", "create") {
+			return fmt.Errorf("GCP create previews require a complete JSON/YAML request; put project/account/location in that request")
+		}
+		return runGCPCommandGen(input, format, shell, width, stdin, stdout)
+	}
 	if oneOf(target, "aws", "alicloud") {
 		if action != "" && action != "create" {
 			return fmt.Errorf("cloud generation supports --action create; verification and rollback examples are included")
@@ -68,7 +74,7 @@ func runCommandGen(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 		return runDecompose("decompose", []string{"--input", input, "--from", from, "--to", target, "--format", format, "--region", region, "--profile", profile, "--width", fmt.Sprint(width), "--step", fmt.Sprint(step)}, stdin, stdout, stderr)
 	}
 	if !oneOf(target, "spacelift", "tofu", "terraform") {
-		return fmt.Errorf("--to must be spacelift, aws, alicloud, tofu or terraform")
+		return fmt.Errorf("--to must be spacelift, aws, alicloud, gcp, tofu or terraform")
 	}
 	if region != "" || profile != "" || step != 0 || from != "auto" {
 		return fmt.Errorf("--region, --profile, --step and --from are cloud-only options")

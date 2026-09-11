@@ -34,6 +34,7 @@ type contextExpectations struct {
 }
 
 var contextFields = map[string][]string{
+	"gcp": {"project", "project_number", "account", "principal", "zone", "region", "configuration"},
 	"aws": {"account", "region", "profile", "principal"}, "alicloud": {"account", "region", "profile", "principal"},
 	"kubernetes": {"cluster", "namespace", "server", "user"}, "terraform": {"workspace", "backend", "backend_key", "engine_version", "backend_bucket", "backend_region", "backend_container", "backend_account", "backend_prefix"}, "tofu": {"workspace", "backend", "backend_key", "engine_version", "backend_bucket", "backend_region", "backend_container", "backend_account", "backend_prefix"},
 	"docker": {"endpoint", "daemon_id"}, "spacelift": {"account", "stack", "run", "commit", "endpoint", "principal", "state", "needs_approval", "is_most_recent"}, "ansible": {"inventory_sha256", "limit", "user", "inventory_hosts_sha256", "host_count"},

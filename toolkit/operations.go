@@ -526,15 +526,19 @@ func appendVersionedReport(combined *finding.Report, data []byte, source string)
 
 func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	var expectedCloud, expectedAccount, expectedRegion, collectedRegion string
+	var expectedProject, expectedZone, configuration string
 	var collect bool
 	_, options, err := parseFlags("cloud-context-check", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
 		addProvenanceFlags(fs, &options)
-		fs.StringVar(&expectedCloud, "expect-cloud", "", "expected cloud: aws or alicloud")
+		fs.StringVar(&expectedCloud, "expect-cloud", "", "expected cloud: aws, alicloud or gcp")
+		fs.StringVar(&expectedProject, "expect-project", "", "expected GCP project ID")
+		fs.StringVar(&expectedZone, "expect-zone", "", "expected configured GCP zone")
+		fs.StringVar(&configuration, "configuration", "", "gcloud named configuration")
 		fs.StringVar(&expectedAccount, "expect-account", "", "expected account ID")
 		fs.StringVar(&expectedRegion, "expect-region", "", "expected region")
-		fs.BoolVar(&collect, "collect", false, "collect caller identity using aws or aliyun CLI")
+		fs.BoolVar(&collect, "collect", false, "collect identity using the provider CLI")
 		fs.StringVar(&collectedRegion, "actual-region", "", "active region when using --collect")
 		return &options
 	})
@@ -543,6 +547,15 @@ func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writ
 	}
 	if expectedCloud == "" || expectedAccount == "" {
 		return fmt.Errorf("--expect-cloud and --expect-account are required")
+	}
+	if expectedCloud == "gcp" {
+		if collectedRegion != "" {
+			return fmt.Errorf("GCP does not accept caller-supplied --actual-region")
+		}
+		return runGCPContextCheck(options, expectedProject, expectedAccount, expectedRegion, expectedZone, configuration, collect, stdin, stdout)
+	}
+	if expectedProject != "" || expectedZone != "" || configuration != "" {
+		return fmt.Errorf("GCP context options require --expect-cloud gcp")
 	}
 	var data []byte
 	if collect {

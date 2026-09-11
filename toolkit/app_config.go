@@ -67,7 +67,7 @@ var configurableFlags = map[string]map[string]bool{
 	"fleet-check":         flagSet("format", "width", "environment", "max-age", "baseline-max-age"),
 	"report-read":         flagSet("width", "layout"),
 	"doctor":              flagSet("format", "width", "environment", "sample"),
-	"collect":             flagSet("kind", "region", "profile", "max-pages"),
+	"collect":             flagSet("kind", "cloud", "region", "profile", "max-pages", "configuration", "max-instances"),
 	"changes":             flagSet("format", "width", "environment", "kind", "max-age", "baseline-max-age"),
 	"kube-explain":        flagSet("format", "width", "environment", "max-age"),
 	"ansible-watch":       flagSet("format", "width", "environment", "max-age"),

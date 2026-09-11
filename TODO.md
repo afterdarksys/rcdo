@@ -11,6 +11,15 @@ with both Terraform and OpenTofu passed. See the
 
 ## Next implementation and acceptance work
 
+- [x] Add native Google Cloud project/account checks, bounded Compute Engine
+  fleet and attachment collection, and explicit create-command previews for
+  networks, subnets, buckets and service accounts. Include credential-free
+  failure-path tests and the [Google Cloud guide](docs/google-cloud.md).
+- [ ] Validate Google Cloud collection against an authenticated nonproduction
+  project and the operator's assistive technology; retain redacted fixtures.
+- [ ] Extend Google Cloud coverage with explicit contracts for Shared VPC,
+  IAM and additional services, and Google Cloud HCL decomposition.
+
 - [x] Add opt-in executable plugins with global/per-plugin configuration switches,
   metadata-only listing, bounded execution, validated reports, documentation and
   an executable authoring example. Keep plugin provenance separate from built-ins.
