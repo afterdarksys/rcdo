@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"git-tools/diffwalk"
 	"git-tools/finding"
@@ -250,22 +251,28 @@ func runDeployReview(args []string, stdin io.Reader, stdout, stderr io.Writer) e
 		if readErr != nil {
 			return readErr
 		}
-		if err := appendReport(&combined, data, "input"); err != nil {
-			return err
+		if err := appendVersionedReport(&combined, data, "input"); err != nil {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, err.Error())
+		} else {
+			present["input"] = true
 		}
-		present["input"] = true
 	} else {
+		declared := map[string]bool{}
 		for _, spec := range reports {
 			component, path, specErr := parseReportSpec(spec)
 			if specErr != nil {
 				return specErr
 			}
+			if declared[component] {
+				return fmt.Errorf("duplicate report component %s", component)
+			}
+			declared[component] = true
 			data, readErr := os.ReadFile(path)
 			if readErr != nil {
 				combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: could not read report %s: %v", component, path, readErr))
 				continue
 			}
-			if err := appendReport(&combined, data, component); err != nil {
+			if err := appendVersionedReport(&combined, data, component); err != nil {
 				combined.IncompleteChecks = append(combined.IncompleteChecks, err.Error())
 				continue
 			}
@@ -311,17 +318,21 @@ type reviewChangeManifest struct {
 	Environment        string            `json:"environment"`
 	RequiredComponents []string          `json:"required_components"`
 	Reports            map[string]string `json:"reports"`
+	Sources            map[string]string `json:"sources,omitempty"`
+	Tools              map[string]string `json:"tools,omitempty"`
 }
 
 func runReviewChange(args []string, stdout, stderr io.Writer) error {
 	var manifestPath, format, policy string
 	var width int
+	var maxAge time.Duration
 	fs := flag.NewFlagSet("review-change", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&manifestPath, "manifest", "review-change.json", "change manifest containing required components and report paths")
 	fs.StringVar(&format, "format", "text", "output format: text, json, github, or sarif")
 	fs.StringVar(&policy, "policy", "", "JSON policy containing owned, expiring suppressions")
 	fs.IntVar(&width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
+	fs.DurationVar(&maxAge, "max-age", 24*time.Hour, "maximum component review age")
 	setAccessibleUsage(fs, "review-change", stderr)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -329,12 +340,18 @@ func runReviewChange(args []string, stdout, stderr io.Writer) error {
 	if fs.NArg() > 0 {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
+	if maxAge <= 0 {
+		return fmt.Errorf("max-age must be positive")
+	}
 	if format != "text" && format != "json" && format != "github" && format != "sarif" {
 		return fmt.Errorf("unknown format %q; expected text, json, github, or sarif", format)
 	}
 	data, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return fmt.Errorf("read manifest %q: %w", manifestPath, err)
+	}
+	if validateConfigDocument("json", data) != nil {
+		return fmt.Errorf("invalid change manifest JSON")
 	}
 	var manifest reviewChangeManifest
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -359,6 +376,11 @@ func runReviewChange(args []string, stdout, stderr io.Writer) error {
 		Findings:         []finding.Finding{},
 		CompletedChecks:  []string{fmt.Sprintf("change manifest %s; commit %s; environment %s", manifest.ChangeID, manifest.Commit, manifest.Environment)},
 		IncompleteChecks: []string{},
+	}
+	bindingOptions := commonOptions{input: manifestPath, changeID: manifest.ChangeID, commit: manifest.Commit, environment: manifest.Environment}
+	bindReportSource(&combined, bindingOptions, "review-change", data)
+	if err := combined.Provenance.Validate(); err != nil {
+		return fmt.Errorf("invalid change manifest provenance: %w", err)
 	}
 	baseDir := filepath.Dir(manifestPath)
 	present := map[string]bool{}
@@ -386,12 +408,55 @@ func runReviewChange(args []string, stdout, stderr io.Writer) error {
 			combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: could not read report %s: %v", component, reportPath, readErr))
 			continue
 		}
+		absoluteReport, _ := filepath.Abs(reportPath)
+		combined.Provenance.Artifacts = append(combined.Provenance.Artifacts, finding.ProvenanceArtifact{Path: absoluteReport, SHA256: digestBytes(reportData)})
 		before := len(combined.Findings)
 		if appendErr := appendVersionedReport(&combined, reportData, component); appendErr != nil {
 			combined.IncompleteChecks = append(combined.IncompleteChecks, appendErr.Error())
 			continue
 		}
 		present[component] = true
+		componentReport, decodeErr := decodeSessionReport(reportData)
+		if decodeErr != nil {
+			return decodeErr
+		}
+		p := componentReport.Provenance
+		if p == nil {
+			combined.IncompleteChecks = append(combined.IncompleteChecks, component+": report has no change/source provenance; regenerate bound evidence with the producing tool or adapter")
+		} else {
+			combined.Provenance.Artifacts = append(combined.Provenance.Artifacts, p.Artifacts...)
+			if err := checkProvenanceArtifacts(p); err != nil {
+				combined.IncompleteChecks = append(combined.IncompleteChecks, component+": "+err.Error())
+			}
+			expectedTool := manifest.Tools[rawComponent]
+			if expectedTool == "" {
+				expectedTool = map[string]string{"ansible": "ansible-check", "opentofu": "tofu-check", "terraform": "tofu-check", "cloud-context": "cloud-context-check", "pull-request": "pr-manager", "workflow": "workflow-check"}[component]
+				if expectedTool == "" {
+					expectedTool = component
+				}
+			}
+			if p.Tool != expectedTool {
+				combined.IncompleteChecks = append(combined.IncompleteChecks, component+": report tool does not match required component tool")
+			}
+			if p.ChangeID != manifest.ChangeID || p.Commit != manifest.Commit || p.Environment != manifest.Environment {
+				combined.IncompleteChecks = append(combined.IncompleteChecks, component+": report provenance does not match change, commit and environment")
+			}
+			checkFresh(&combined, component+" review", p.CollectedAt, maxAge, time.Now().UTC())
+			sourcePath := manifest.Sources[rawComponent]
+			if sourcePath == "" {
+				combined.IncompleteChecks = append(combined.IncompleteChecks, component+": source artifact is required to verify report binding")
+			} else {
+				if !filepath.IsAbs(sourcePath) {
+					sourcePath = filepath.Join(baseDir, sourcePath)
+				}
+				sourceData, sourceErr := readConfigSource(sourcePath)
+				absoluteSource, _ := filepath.Abs(sourcePath)
+				combined.Provenance.Artifacts = append(combined.Provenance.Artifacts, finding.ProvenanceArtifact{Path: absoluteSource, SHA256: p.SourceSHA256})
+				if sourceErr != nil || digestBytes(sourceData) != p.SourceSHA256 {
+					combined.IncompleteChecks = append(combined.IncompleteChecks, component+": reviewed source artifact is unavailable or changed")
+				}
+			}
+		}
 		for _, item := range combined.Findings[before:] {
 			if !strings.EqualFold(item.Environment, manifest.Environment) {
 				combined.IncompleteChecks = append(combined.IncompleteChecks, fmt.Sprintf("%s: finding %s environment %q does not match manifest environment %q", component, item.ID, item.Environment, manifest.Environment))
@@ -439,27 +504,17 @@ func appendReport(combined *finding.Report, data []byte, source string) error {
 }
 
 func appendVersionedReport(combined *finding.Report, data []byte, source string) error {
-	var envelope struct {
-		SchemaVersion string            `json:"schema_version"`
-		Status        finding.Status    `json:"status"`
-		Findings      []finding.Finding `json:"findings"`
-		Completed     []string          `json:"completed_checks"`
-		Incomplete    []string          `json:"incomplete_checks"`
+	report, err := decodeSessionReport(data)
+	if err != nil {
+		return fmt.Errorf("report %s: %w", source, err)
 	}
-	if err := json.Unmarshal(data, &envelope); err != nil {
-		return fmt.Errorf("parse report %s: %w", source, err)
+	if err := appendReport(combined, data, source); err != nil {
+		return err
 	}
-	if envelope.SchemaVersion != finding.SchemaVersion {
-		return fmt.Errorf("report %s has schema_version %q; expected %q", source, envelope.SchemaVersion, finding.SchemaVersion)
+	if err := checkProvenanceArtifacts(report.Provenance); err != nil {
+		combined.IncompleteChecks = append(combined.IncompleteChecks, source+": "+err.Error())
 	}
-	report := finding.Report{Findings: envelope.Findings, CompletedChecks: envelope.Completed, IncompleteChecks: envelope.Incomplete}
-	if err := report.Validate(); err != nil {
-		return fmt.Errorf("validate report %s: %w", source, err)
-	}
-	if envelope.Status != report.Status() {
-		return fmt.Errorf("report %s claims status %q; calculated status is %q", source, envelope.Status, report.Status())
-	}
-	return appendReport(combined, data, source)
+	return nil
 }
 
 func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
@@ -468,6 +523,7 @@ func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writ
 	_, options, err := parseFlags("cloud-context-check", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
+		addProvenanceFlags(fs, &options)
 		fs.StringVar(&expectedCloud, "expect-cloud", "", "expected cloud: aws or alicloud")
 		fs.StringVar(&expectedAccount, "expect-account", "", "expected account ID")
 		fs.StringVar(&expectedRegion, "expect-region", "", "expected region")
@@ -535,5 +591,6 @@ func runCloudContextCheck(args []string, stdin io.Reader, stdout, stderr io.Writ
 			))
 		}
 	}
+	bindReportSource(&report, options, "cloud-context-check", data)
 	return emitReportOptions(stdout, options, report)
 }

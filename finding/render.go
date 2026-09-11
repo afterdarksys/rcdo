@@ -199,12 +199,13 @@ func severityRank(severity Severity) int {
 }
 
 type jsonReport struct {
-	SchemaVersion    string    `json:"schema_version"`
-	Status           Status    `json:"status"`
-	Summary          Summary   `json:"summary"`
-	Findings         []Finding `json:"findings"`
-	CompletedChecks  []string  `json:"completed_checks"`
-	IncompleteChecks []string  `json:"incomplete_checks"`
+	Provenance       *Provenance `json:"provenance,omitempty"`
+	SchemaVersion    string      `json:"schema_version"`
+	Status           Status      `json:"status"`
+	Summary          Summary     `json:"summary"`
+	Findings         []Finding   `json:"findings"`
+	CompletedChecks  []string    `json:"completed_checks"`
+	IncompleteChecks []string    `json:"incomplete_checks"`
 }
 
 // RenderJSON writes the versioned machine-readable report contract.
@@ -230,6 +231,7 @@ func RenderJSON(w io.Writer, report Report) error {
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(jsonReport{
+		Provenance:       report.Provenance,
 		SchemaVersion:    SchemaVersion,
 		Status:           report.Status(),
 		Summary:          report.Summary(),

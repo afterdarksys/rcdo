@@ -595,7 +595,9 @@ func TestCredentialStoreRejectsLoosePermissions(t *testing.T) {
 
 func TestDeployReviewCombinesFindingReport(t *testing.T) {
 	report := map[string]any{
-		"status": "blocked",
+		"schema_version":   "1",
+		"completed_checks": []string{"fixture review"},
+		"status":           "blocked",
 		"findings": []map[string]any{{
 			"id": "X-1", "severity": "high", "title": "Risk", "resource": "prod", "action": "deploy",
 			"environment": "production", "reason": "test", "evidence": []string{"evidence"}, "confidence": "high", "remediation": "stop",
@@ -632,7 +634,7 @@ func TestReviewChangeManifestEnforcesCoverage(t *testing.T) {
 	manifestData := `{
   "schema_version":"1",
   "change_id":"PR-42",
-  "commit":"abc123",
+  "commit":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "environment":"production",
   "required_components":["opentofu","cloud-context"],
   "reports":{"opentofu":"tofu.json"}
@@ -641,7 +643,7 @@ func TestReviewChangeManifestEnforcesCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, stdout, stderr := execute("review-change", []string{"--manifest", manifest}, "")
-	if code != 30 || !strings.Contains(stdout, "change manifest PR-42; commit abc123; environment production") ||
+	if code != 30 || !strings.Contains(strings.Join(strings.Fields(stdout), " "), "change manifest PR-42; commit aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; environment production") ||
 		!strings.Contains(stdout, "required component cloud-context has no valid report") || stderr != "" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
@@ -654,8 +656,8 @@ func TestReviewChangeManifestEnforcesCoverage(t *testing.T) {
 		t.Fatal(err)
 	}
 	code, stdout, stderr = execute("review-change", []string{"--manifest", manifest}, "")
-	if code != 0 || !strings.Contains(stdout, "REVIEW RESULT: CLEAN") || stderr != "" {
-		t.Fatalf("clean code=%d stdout=%q stderr=%q", code, stdout, stderr)
+	if code != 30 || !strings.Contains(stdout, "report has no change/source provenance") || stderr != "" {
+		t.Fatalf("unbound code=%d stdout=%q stderr=%q", code, stdout, stderr)
 	}
 }
 

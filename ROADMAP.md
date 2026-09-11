@@ -253,3 +253,21 @@ are delivered. No automated test result substitutes for the two open pilot items
 - [x] Fixture-based policy testing.
 - [x] Before/after policy comparison on identical inputs.
 - [x] Combined built-in IaC and Rego review with individual check evidence.
+
+## Terraform-to-Ansible workflow and review integrity
+
+- [x] Fix six audited false-clean/false-ready cases in report aggregation,
+  truncated scanning, Ansible YAML inspection, change provenance, PR readiness
+  and partial Ansible decomposition.
+- [x] Trace explicit Terraform/OpenTofu outputs to Ansible host variables and
+  identify extra-vars overrides, type mismatches and changed targets.
+- [x] Check source bindings, producer identity, freshness, invocation inputs,
+  callback scope and required post-run outcome evidence.
+- [x] Support static inventory and saved native inventory snapshots, with
+  dependency-aware invalidation of aggregated reports and review sessions.
+- [x] Validate synthetic cases and actual localhost handoffs with Terraform,
+  OpenTofu and Ansible.
+- [ ] Complete workplace adapters, remaining producer provenance, expanded
+  consumer tracing and operator acceptance described in [TODO.md](TODO.md).
+
+Usage and evidence limits: [workflow guide](docs/terraform-ansible-workflow.md).

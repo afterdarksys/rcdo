@@ -37,12 +37,15 @@ func runPRManager(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 		args = args[1:]
 	}
 	var expectedCommit, collectPR, repository string
+	var requiredChecks stringList
 	_, options, err := parseFlags("pr-manager inspect", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
+		addProvenanceFlags(fs, &options)
 		fs.StringVar(&expectedCommit, "expect-commit", "", "expected pull-request head SHA")
 		fs.StringVar(&collectPR, "collect", "", "pull-request number, URL, or branch to collect using gh")
 		fs.StringVar(&repository, "repo", "", "GitHub repository in OWNER/REPO form")
+		fs.Var(&requiredChecks, "require-check", "required successful check name or status context; repeatable")
 		return &options
 	})
 	if err != nil {
@@ -68,6 +71,9 @@ func runPRManager(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	number := stringValue(object, "number")
 	title := stringValue(object, "title")
 	commit := stringValue(object, "headRefOid", "head_sha")
+	if options.commit != "" && expectedCommit == "" {
+		expectedCommit = options.commit
+	}
 	mergeable := strings.ToUpper(stringValue(object, "mergeable"))
 	review := strings.ToUpper(stringValue(object, "reviewDecision", "review_decision"))
 	resource := "pull-request-" + number
@@ -78,13 +84,13 @@ func runPRManager(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	if title == "" || commit == "" {
 		report.IncompleteChecks = append(report.IncompleteChecks, "pull-request title or head commit is missing")
 	}
-	if mergeable == "" {
-		report.IncompleteChecks = append(report.IncompleteChecks, "pull-request mergeability is missing")
+	if !oneOf(mergeable, "MERGEABLE", "CONFLICTING") {
+		report.IncompleteChecks = append(report.IncompleteChecks, "pull-request mergeability is missing or unknown")
 	}
 	if _, present := object["statusCheckRollup"]; !present {
 		report.IncompleteChecks = append(report.IncompleteChecks, "pull-request status checks are missing")
 	}
-	if expectedCommit != "" && commit != "" && !strings.HasPrefix(commit, expectedCommit) && !strings.HasPrefix(expectedCommit, commit) {
+	if expectedCommit != "" && commit != "" && commit != expectedCommit {
 		report.Findings = append(report.Findings, makeFinding(
 			"PR-COMMIT-001", finding.SeverityCritical, "Pull request uses an unexpected commit", resource,
 			"review", options.environment, "The pull-request head does not match the expected commit.",
@@ -113,6 +119,43 @@ func runPRManager(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 			"Open the failing check, resolve the cause, and rerun it on the same commit.",
 		))
 	}
+	checkItems, valid := object["statusCheckRollup"].([]any)
+	if !valid {
+		report.IncompleteChecks = append(report.IncompleteChecks, "Pull-request check results have no valid array")
+	}
+	success := map[string]bool{}
+	seen := map[string]bool{}
+	for i, raw := range checkItems {
+		item, ok := raw.(map[string]any)
+		name := stringValue(item, "name", "context")
+		if !ok || name == "" || seen[name] {
+			report.IncompleteChecks = append(report.IncompleteChecks, fmt.Sprintf("Check %d has missing, invalid or duplicate identity", i+1))
+			continue
+		}
+		seen[name] = true
+		state := strings.ToUpper(stringValue(item, "state"))
+		status := strings.ToUpper(stringValue(item, "status"))
+		conclusion := strings.ToUpper(stringValue(item, "conclusion"))
+		if state != "" {
+			success[name] = state == "SUCCESS"
+			if !oneOf(state, "SUCCESS", "FAILURE", "ERROR") {
+				report.IncompleteChecks = append(report.IncompleteChecks, "Status check is pending or unknown: "+safeReportText(name))
+			}
+		} else {
+			success[name] = status == "COMPLETED" && conclusion == "SUCCESS"
+			if status != "COMPLETED" || !oneOf(conclusion, "SUCCESS", "FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE", "STALE") {
+				report.IncompleteChecks = append(report.IncompleteChecks, "Check completion or success is unverified: "+safeReportText(name))
+			} else if !success[name] && !oneOf(conclusion, "FAILURE", "CANCELLED", "TIMED_OUT") {
+				addIAC(&report, "PR-CHECK", finding.SeverityHigh, "Pull request check did not succeed", safeReportText(name), "review", options.environment, "Conclusion: "+conclusion)
+			}
+		}
+	}
+	for _, name := range requiredChecks {
+		if !success[name] {
+			report.IncompleteChecks = append(report.IncompleteChecks, "Required successful check is missing: "+safeReportText(name))
+		}
+	}
+	bindReportSource(&report, options, "pr-manager", data)
 	return emitReportOptions(stdout, options, report)
 }
 

@@ -2,8 +2,11 @@
 package finding
 
 import (
+	"encoding/hex"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // SchemaVersion changes when the JSON contract changes incompatibly.
@@ -97,12 +100,67 @@ func (c Confidence) valid() bool {
 
 // Report contains findings plus checks that could not be completed.
 type Report struct {
-	Findings         []Finding `json:"findings"`
-	CompletedChecks  []string  `json:"completed_checks"`
-	IncompleteChecks []string  `json:"incomplete_checks"`
+	Provenance       *Provenance `json:"provenance,omitempty"`
+	Findings         []Finding   `json:"findings"`
+	CompletedChecks  []string    `json:"completed_checks"`
+	IncompleteChecks []string    `json:"incomplete_checks"`
+}
+
+// Provenance version 1 binds a review to exact source bytes and explicit change
+// labels. It is local integrity evidence, not signed execution attestation.
+type Provenance struct {
+	Artifacts     []ProvenanceArtifact `json:"artifacts,omitempty"`
+	SchemaVersion string               `json:"schema_version"`
+	Tool          string               `json:"tool"`
+	ChangeID      string               `json:"change_id"`
+	Commit        string               `json:"commit"`
+	Environment   string               `json:"environment"`
+	SourceSHA256  string               `json:"source_sha256"`
+	CollectedAt   string               `json:"collected_at"`
+}
+
+type ProvenanceArtifact struct {
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+}
+
+func (p Provenance) Validate() error {
+	if len(p.Artifacts) > 512 {
+		return fmt.Errorf("too many provenance artifacts")
+	}
+	for _, a := range p.Artifacts {
+		b, e := hex.DecodeString(a.SHA256)
+		if !filepath.IsAbs(a.Path) || e != nil || len(b) != 32 {
+			return fmt.Errorf("invalid provenance artifact")
+		}
+	}
+	if p.SchemaVersion != "1" || strings.TrimSpace(p.Tool) == "" || strings.TrimSpace(p.Environment) == "" {
+		return fmt.Errorf("invalid provenance identity or version")
+	}
+	if b, err := hex.DecodeString(p.SourceSHA256); err != nil || len(b) != 32 {
+		return fmt.Errorf("invalid provenance source SHA-256")
+	}
+	if _, err := time.Parse(time.RFC3339Nano, p.CollectedAt); err != nil {
+		return fmt.Errorf("invalid provenance timestamp")
+	}
+	if (p.ChangeID == "") != (p.Commit == "") {
+		return fmt.Errorf("provenance change ID and commit must be supplied together")
+	}
+	if p.Commit != "" {
+		b, err := hex.DecodeString(p.Commit)
+		if err != nil || (len(b) != 20 && len(b) != 32) {
+			return fmt.Errorf("provenance requires a full Git commit hash")
+		}
+	}
+	return nil
 }
 
 func (r Report) Validate() error {
+	if r.Provenance != nil {
+		if err := r.Provenance.Validate(); err != nil {
+			return err
+		}
+	}
 	seen := make(map[string]struct{}, len(r.Findings))
 	for i, finding := range r.Findings {
 		if err := finding.Validate(); err != nil {

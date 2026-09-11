@@ -322,6 +322,11 @@ func parseAnsibleResources(data []byte, target string) ([]sourceResource, []stri
 			unresolved = append(unresolved, fmt.Sprintf("play %d is not a mapping", playIndex+1))
 			continue
 		}
+		for _, section := range []string{"pre_tasks", "post_tasks", "roles", "handlers", "import_playbook", "vars", "vars_files", "vars_prompt", "module_defaults", "environment", "serial", "strategy", "any_errors_fatal", "max_fail_percentage", "become", "connection", "remote_user", "collections"} {
+			if _, exists := play[section]; exists {
+				unresolved = append(unresolved, fmt.Sprintf("play %d section %s is not translated; review its ordering and runtime behavior", playIndex+1, section))
+			}
+		}
 		tasks, _ := play["tasks"].([]any)
 		for taskIndex, taskValue := range tasks {
 			task, ok := taskValue.(map[string]any)
@@ -356,7 +361,7 @@ func parseAnsibleResources(data []byte, target string) ([]sourceResource, []stri
 					resource.Unresolved = append(resource.Unresolved, key+" was redacted and must be supplied securely")
 				}
 			}
-			for _, control := range []string{"when", "loop", "with_items", "until", "delegate_to"} {
+			for _, control := range []string{"when", "loop", "with_items", "until", "delegate_to", "notify", "run_once", "check_mode", "failed_when", "changed_when", "environment", "ignore_errors", "ignore_unreachable"} {
 				if _, exists := task[control]; exists {
 					resource.Unresolved = append(resource.Unresolved, "Ansible "+control+" behavior requires manual evaluation")
 				}
@@ -368,7 +373,7 @@ func parseAnsibleResources(data []byte, target string) ([]sourceResource, []stri
 			resources = append(resources, resource)
 		}
 	}
-	if len(resources) == 0 {
+	if len(resources) == 0 && len(unresolved) == 0 {
 		return nil, unresolved, fmt.Errorf("Ansible input contains no tasks")
 	}
 	return resources, unresolved, nil

@@ -228,14 +228,14 @@ func runRepositoryReview(args []string, _ io.Reader, stdout, stderr io.Writer) e
 					}
 				}
 				if len(bytes.TrimSpace(added)) > 0 {
-					appendFindings(&report, scanRules(added, file.Path, options.environment, dangerRules).Findings)
+					appendScanReport(&report, scanRules(added, file.Path, options.environment, dangerRules))
 				}
 			}
 			if strings.HasPrefix(file.Path, ".github/workflows/") {
-				appendFindings(&report, scanRules(afterData, file.Path, options.environment, ghaRules).Findings)
+				appendScanReport(&report, scanRules(afterData, file.Path, options.environment, ghaRules))
 			}
 			if strings.Contains(strings.ToLower(file.Path), "ansible") || strings.HasSuffix(file.Path, ".yml") || strings.HasSuffix(file.Path, ".yaml") {
-				appendFindings(&report, scanRules(afterData, file.Path, options.environment, ansibleRules).Findings)
+				appendScanReport(&report, scanRules(afterData, file.Path, options.environment, ansibleRules))
 			}
 			applyForbiddenPatterns(&report, policy, file.Path, afterData, options.environment)
 			if isStructuredConfig(file.Path) {
@@ -469,4 +469,9 @@ func runOperationalPolicyCheck(args []string, stdin io.Reader, stdout, stderr io
 	}
 	report := scanOperationalPolicy(basename(options.input), data, options.environment)
 	return emitReportOptions(stdout, options, report)
+}
+
+func appendScanReport(report *finding.Report, scan finding.Report) {
+	appendFindings(report, scan.Findings)
+	report.IncompleteChecks = append(report.IncompleteChecks, scan.IncompleteChecks...)
 }

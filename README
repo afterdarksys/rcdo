@@ -441,7 +441,24 @@ See [schemas, workflows and coverage limitations](docs/spacelift-iac.md).
 
 ### `ansible-check` (MVP available)
 
-Perform conservative text checks for broad host patterns, shell usage, ignored failures, possible plaintext credentials, uncontrolled package upgrades, and always-changed tasks. Use it alongside `ansible-lint`, syntax checks, check mode, and integration tests—not as a replacement for them.
+Perform parsed-YAML checks for broad host patterns, shell usage, ignored failures, possible plaintext credentials, uncontrolled package upgrades, and always-changed tasks. Quotes, comments, sequence markers and flow mappings preserve the same checks. Unresolved includes and roles remain incomplete. Use it alongside `ansible-lint`, syntax checks, check mode, and integration tests.
+
+### Terraform-to-Ansible workflow review
+
+`workflow-check` traces Terraform/OpenTofu outputs to effective Ansible host
+variables, identifies extra-vars overrides, and checks source hashes, types,
+identity, freshness and selected hosts. Execution and verified stages require
+additional bound invocation, callback and outcome evidence.
+
+```sh
+rcdo workflow-check --manifest workflow.json --width 60
+rcdo workflow-check --manifest workflow.json --stage verified
+python3 scripts/workflow-practice.py
+```
+
+See [workflow contracts and local native practice](docs/terraform-ansible-workflow.md).
+The guide also covers stricter `deploy-review` validation and the provenance and
+source bindings now required by `review-change`.
 
 ### `deploy-review` (MVP available)
 

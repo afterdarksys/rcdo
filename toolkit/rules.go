@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"git-tools/finding"
 )
 
@@ -77,6 +79,7 @@ func runNativeRuleCheck(name string, args []string, stdin io.Reader, stdout, std
 	_, options, err := parseFlags(name, args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var options commonOptions
 		addCommonFlags(fs, &options)
+		addProvenanceFlags(fs, &options)
 		fs.BoolVar(&native, "native", false, "also run the installed native syntax checker; requires a named input file")
 		return &options
 	})
@@ -88,6 +91,7 @@ func runNativeRuleCheck(name string, args []string, stdin io.Reader, stdout, std
 		return err
 	}
 	report := scanRules(data, basename(options.input), options.environment, rules)
+	bindReportSource(&report, options, name, data)
 	if native {
 		if options.input == "-" {
 			report.IncompleteChecks = append(report.IncompleteChecks, nativeProgram+" requires --input with a file path")
@@ -119,6 +123,9 @@ func runNativeRuleCheck(name string, args []string, stdin io.Reader, stdout, std
 }
 
 func scanRules(data []byte, resource, environment string, rules []textRule) finding.Report {
+	if len(rules) > 0 && rules[0].id == "ALLHOSTS" {
+		return scanAnsibleYAML(data, resource, environment)
+	}
 	if resource == "-" {
 		resource = "standard-input"
 	}
@@ -140,7 +147,78 @@ func scanRules(data []byte, resource, environment string, rules []textRule) find
 			}
 		}
 	}
+	if scanner.Err() != nil {
+		report.IncompleteChecks = append(report.IncompleteChecks, "Static safety scan stopped before end of input: line exceeds limit or input could not be read")
+	}
 	return report
+}
+
+// Inspect scalar nodes, not their presentation: quotes, comments, sequence
+// markers and flow-style mappings must not change the safety result.
+func scanAnsibleYAML(data []byte, resource, environment string) finding.Report {
+	r := finding.Report{CompletedChecks: []string{"Parsed YAML static Ansible safety rules; runtime variable resolution is not established"}}
+	var root yaml.Node
+	if len(data) > 16<<20 || validateConfigDocument("yaml", data) != nil || yaml.Unmarshal(data, &root) != nil {
+		r.IncompleteChecks = append(r.IncompleteChecks, "Ansible YAML could not be fully parsed within input limits")
+		return r
+	}
+	active := map[*yaml.Node]bool{}
+	visits := 0
+	var walk func(*yaml.Node, int)
+	walk = func(n *yaml.Node, depth int) {
+		visits++
+		if depth > 64 || visits > 100000 || active[n] {
+			r.IncompleteChecks = append(r.IncompleteChecks, "Ansible YAML alias cycle, depth or node limit prevents complete review")
+			return
+		}
+		active[n] = true
+		defer delete(active, n)
+		if n.Kind == yaml.AliasNode {
+			walk(n.Alias, depth+1)
+			return
+		}
+		if n.Kind == yaml.MappingNode {
+			for i := 0; i+1 < len(n.Content); i += 2 {
+				key, value := n.Content[i], n.Content[i+1]
+				k := strings.TrimPrefix(key.Value, "ansible.builtin.")
+				v := value
+				if v.Kind == yaml.AliasNode && v.Alias != nil {
+					v = v.Alias
+				}
+				line := k + ": " + v.Value
+				for _, rule := range ansibleRules {
+					matched := rule.pattern.MatchString(line)
+					if rule.id == "PLAINTEXT" && (v.Tag == "!vault" || strings.HasPrefix(strings.TrimSpace(v.Value), "{{")) {
+						matched = false
+					}
+					if matched {
+						evidence := safeReportText(redactLine(line))
+						identity := line
+						if rule.id == "PLAINTEXT" {
+							evidence = k + ": [REDACTED]"
+							identity = k
+						}
+						r.Findings = append(r.Findings, makeFinding(stableFindingID(&r, rule.id, resource, identity), rule.severity, rule.title, resource, "review YAML", environment,
+							fmt.Sprintf("Rule %s matched YAML key at line %d.", rule.id, key.Line), fmt.Sprintf("line %d: %s", key.Line, evidence), rule.remediation))
+					}
+				}
+				if k == "hosts" && v.Kind != yaml.ScalarNode {
+					r.IncompleteChecks = append(r.IncompleteChecks, fmt.Sprintf("Ansible host collection at line %d requires scope resolution", key.Line))
+				}
+				if oneOf(k, "include", "include_tasks", "import_tasks", "include_role", "import_role", "import_playbook", "roles", "vars_files", "include_vars", "action", "local_action") || k == "<<" || ((k == "hosts" || k == "ignore_errors") && strings.Contains(v.Value, "{{")) {
+					r.IncompleteChecks = append(r.IncompleteChecks, fmt.Sprintf("Ansible %s at line %d requires additional source or runtime resolution", safeReportText(k), key.Line))
+				}
+				walk(value, depth+1)
+			}
+			return
+		}
+		for _, child := range n.Content {
+			walk(child, depth+1)
+		}
+	}
+	walk(&root, 0)
+	r.IncompleteChecks = uniqueStrings(r.IncompleteChecks)
+	return r
 }
 
 var secretAssignment = regexp.MustCompile(`(?i)(password|passwd|secret|token|api[_-]?key|access[_-]?key)(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,}]+)`)

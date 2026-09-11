@@ -224,17 +224,21 @@ func runReviewSession(args []string, stdout, stderr io.Writer) error {
 }
 
 func decodeSessionReport(data []byte) (finding.Report, error) {
+	if validateConfigDocument("json", data) != nil {
+		return finding.Report{}, fmt.Errorf("invalid report JSON")
+	}
 	var envelope struct {
-		SchemaVersion string            `json:"schema_version"`
-		Status        finding.Status    `json:"status"`
-		Findings      []finding.Finding `json:"findings"`
-		Completed     []string          `json:"completed_checks"`
-		Incomplete    []string          `json:"incomplete_checks"`
+		Provenance    *finding.Provenance `json:"provenance,omitempty"`
+		SchemaVersion string              `json:"schema_version"`
+		Status        finding.Status      `json:"status"`
+		Findings      []finding.Finding   `json:"findings"`
+		Completed     []string            `json:"completed_checks"`
+		Incomplete    []string            `json:"incomplete_checks"`
 	}
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return finding.Report{}, fmt.Errorf("parse report: %w", err)
 	}
-	report := finding.Report{Findings: envelope.Findings, CompletedChecks: envelope.Completed, IncompleteChecks: envelope.Incomplete}
+	report := finding.Report{Provenance: envelope.Provenance, Findings: envelope.Findings, CompletedChecks: envelope.Completed, IncompleteChecks: envelope.Incomplete}
 	if envelope.SchemaVersion != finding.SchemaVersion || envelope.Findings == nil || envelope.Completed == nil || envelope.Incomplete == nil {
 		return report, fmt.Errorf("session requires a versioned report with findings, completed_checks, and incomplete_checks arrays")
 	}
@@ -311,6 +315,9 @@ func cleanReviewHead(repo string) (string, error) {
 	return strings.TrimSpace(string(head.stdout)), nil
 }
 func sessionFresh(session reviewSession) error {
+	if err := checkProvenanceArtifacts(session.Report.Provenance); err != nil {
+		return err
+	}
 	expires, err := time.Parse(time.RFC3339Nano, session.ExpiresAt)
 	if err != nil || !time.Now().Before(expires) {
 		return fmt.Errorf("session expired; collect fresh evidence")

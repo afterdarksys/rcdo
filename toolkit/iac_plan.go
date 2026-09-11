@@ -129,6 +129,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 	_, o, err := parseFlags("tofu-check", args, stderr, func(fs *flag.FlagSet) *commonOptions {
 		var o commonOptions
 		addCommonFlags(fs, &o)
+		addProvenanceFlags(fs, &o)
 		fs.StringVar(&planFile, "plan", "", "saved plan to convert with the selected engine")
 		fs.StringVar(&engine, "engine", "tofu", "saved-plan reader: tofu or terraform")
 		fs.StringVar(&limitsFile, "limits", "", "JSON impact limits and exact critical resource addresses")
@@ -166,6 +167,7 @@ func runTofuCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) erro
 		return fmt.Errorf("impact limits must be nonnegative")
 	}
 	r := reviewIAC(p, o.environment, limits)
+	bindReportSource(&r, o, "tofu-check", data)
 	if planFile != "" {
 		r.CompletedChecks = append(r.CompletedChecks, "Saved-plan reader: "+engine)
 	}

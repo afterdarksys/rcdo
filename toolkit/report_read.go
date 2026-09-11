@@ -73,12 +73,13 @@ func runReportRead(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 		return fmt.Errorf("report exceeds 16 MiB")
 	}
 	var envelope struct {
-		SchemaVersion string            `json:"schema_version"`
-		Status        finding.Status    `json:"status"`
-		Summary       finding.Summary   `json:"summary"`
-		Findings      []finding.Finding `json:"findings"`
-		Completed     []string          `json:"completed_checks"`
-		Incomplete    []string          `json:"incomplete_checks"`
+		Provenance    *finding.Provenance `json:"provenance,omitempty"`
+		SchemaVersion string              `json:"schema_version"`
+		Status        finding.Status      `json:"status"`
+		Summary       finding.Summary     `json:"summary"`
+		Findings      []finding.Finding   `json:"findings"`
+		Completed     []string            `json:"completed_checks"`
+		Incomplete    []string            `json:"incomplete_checks"`
 	}
 	if strictJSON(data, &envelope) != nil {
 		return fmt.Errorf("invalid report JSON")
@@ -86,6 +87,9 @@ func runReportRead(args []string, stdin io.Reader, stdout, stderr io.Writer) err
 	r, err := decodeSessionReport(data)
 	if err != nil {
 		return err
+	}
+	if err := checkProvenanceArtifacts(r.Provenance); err != nil {
+		r.IncompleteChecks = append(r.IncompleteChecks, err.Error())
 	}
 	selected := []finding.Finding{}
 	for _, f := range r.Findings {

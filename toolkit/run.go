@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"workflow-check",
 	"policy-review", "rego-diff", "rego-test", "rego-check",
 	"pilot",
 	"context-acquire",
@@ -87,6 +88,8 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "workflow-check":
+		err = runWorkflowCheck(args, stdin, stdout, stderr)
 	case "policy-review":
 		err = runPolicyReview(args, stdin, stdout, stderr)
 	case "rego-diff":
@@ -268,6 +271,8 @@ func statusExitCode(status finding.Status) int {
 }
 
 type commonOptions struct {
+	changeID    string
+	commit      string
 	input       string
 	format      string
 	environment string
@@ -281,6 +286,33 @@ func addCommonFlags(fs *flag.FlagSet, options *commonOptions) {
 	fs.StringVar(&options.environment, "environment", "unknown", "deployment environment label")
 	fs.StringVar(&options.policy, "policy", "", "JSON policy containing owned, expiring suppressions")
 	fs.IntVar(&options.width, "width", finding.DefaultTextWidth, "maximum text line width; minimum 40")
+}
+
+func addProvenanceFlags(fs *flag.FlagSet, options *commonOptions) {
+	fs.StringVar(&options.changeID, "change-id", "", "explicit change identifier; requires --commit")
+	fs.StringVar(&options.commit, "commit", "", "full Git commit for this source; requires --change-id")
+}
+
+func bindReportSource(r *finding.Report, o commonOptions, tool string, data []byte) {
+	r.Provenance = &finding.Provenance{SchemaVersion: "1", Tool: tool, ChangeID: o.changeID, Commit: o.commit, Environment: o.environment, SourceSHA256: digestBytes(data), CollectedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+	r.CompletedChecks = append(r.CompletedChecks, "Review source binding: tool "+tool+"; environment "+safeReportText(o.environment)+"; change "+safeReportText(emptyValue(o.changeID))+"; commit "+safeReportText(emptyValue(o.commit))+"; source SHA-256 "+digestBytes(data)+". Change labels are supplied by the caller.")
+	if o.input != "" && o.input != "-" {
+		if path, e := filepath.Abs(o.input); e == nil {
+			r.Provenance.Artifacts = append(r.Provenance.Artifacts, finding.ProvenanceArtifact{Path: path, SHA256: digestBytes(data)})
+		}
+	}
+}
+
+func checkProvenanceArtifacts(p *finding.Provenance) error {
+	if p == nil {
+		return nil
+	}
+	for _, a := range p.Artifacts {
+		if _, err := readBoundArtifact(boundArtifact{Path: a.Path, SHA256: a.SHA256}); err != nil {
+			return fmt.Errorf("review provenance artifact is missing or changed")
+		}
+	}
+	return nil
 }
 
 // overrideIntDefault lets one command take a different default from the common
@@ -327,19 +359,31 @@ func setAccessibleUsage(fs *flag.FlagSet, name string, w io.Writer) {
 }
 
 func readInput(path string, stdin io.Reader) ([]byte, error) {
+	const limit = 32 << 20
 	if path == "-" {
-		data, err := io.ReadAll(stdin)
+		data, err := io.ReadAll(io.LimitReader(stdin, limit+1))
 		if err != nil {
 			return nil, fmt.Errorf("read standard input: %w", err)
+		}
+		if len(data) > limit {
+			return nil, fmt.Errorf("input exceeds 32 MiB")
 		}
 		if len(bytes.TrimSpace(data)) == 0 {
 			return nil, fmt.Errorf("input is empty")
 		}
 		return data, nil
 	}
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("read input %q: %w", path, err)
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, limit+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > limit {
+		return nil, fmt.Errorf("input exceeds 32 MiB")
 	}
 	if len(bytes.TrimSpace(data)) == 0 {
 		return nil, fmt.Errorf("input %q is empty", path)
@@ -374,6 +418,9 @@ func emitReport(w io.Writer, format string, width int, report finding.Report) er
 }
 
 func emitReportOptions(w io.Writer, options commonOptions, report finding.Report) error {
+	if err := checkProvenanceArtifacts(report.Provenance); err != nil {
+		report.IncompleteChecks = append(report.IncompleteChecks, err.Error())
+	}
 	filtered, err := applyPolicy(options.policy, report, time.Now().UTC())
 	if err != nil {
 		return err
