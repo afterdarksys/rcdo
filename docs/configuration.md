@@ -64,6 +64,10 @@ providers:
 
 ## Precedence
 
+Optional executable plugins are controlled by `plugins.enabled` and
+`plugins.entries.NAME.enabled`. Both default to false; both must be true to run
+a plugin. See [plugin configuration and authoring](plugins.md).
+
 Options resolve in this order, from strongest to weakest:
 
 1. An explicit command-line option.

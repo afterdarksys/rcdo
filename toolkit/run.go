@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"plugin",
 	"workflow-collect", "workflow-trace",
 	"workflow-check",
 	"policy-review", "rego-diff", "rego-test", "rego-check",
@@ -89,6 +90,8 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "plugin":
+		err = runPlugin(args, configPath, stdin, stdout, stderr)
 	case "workflow-collect":
 		err = runWorkflowCollect(args, stdin, stdout, stderr)
 	case "workflow-trace":

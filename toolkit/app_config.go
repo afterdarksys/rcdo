@@ -16,6 +16,7 @@ import (
 )
 
 type appConfig struct {
+	Plugins         pluginConfig                `json:"plugins" yaml:"plugins"`
 	Version         string                      `json:"version" yaml:"version"`
 	CredentialsFile string                      `json:"credentials_file,omitempty" yaml:"credentials_file,omitempty"`
 	Defaults        map[string]any              `json:"defaults,omitempty" yaml:"defaults,omitempty"`
@@ -43,6 +44,7 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"plugin":              flagSet("format", "width", "environment"),
 	"workflow-collect":    flagSet("format", "width"),
 	"workflow-trace":      flagSet("format", "width", "environment"),
 	"workflow-check":      flagSet("format", "width", "max-age"),
@@ -117,6 +119,7 @@ func flagSet(values ...string) map[string]bool {
 func defaultAppConfig() appConfig {
 	return appConfig{
 		Version:         "1",
+		Plugins:         pluginConfig{Entries: map[string]pluginEntry{}},
 		Audit:           auditConfig{File: "audit.jsonl", Output: "redacted", MaxOutputBytes: 65536},
 		CredentialsFile: "credentials.json",
 		Defaults:        map[string]any{"format": "text", "environment": "unknown", "width": 100},
@@ -162,6 +165,10 @@ func extractRuntimeConfigFlag(args []string) ([]string, string, error) {
 	path := ""
 	for index := 0; index < len(args); index++ {
 		arg := args[index]
+		if arg == "--" {
+			result = append(result, args[index:]...)
+			break
+		}
 		if arg == "--config-file" {
 			if index+1 >= len(args) {
 				return nil, "", fmt.Errorf("--config-file requires a path")
@@ -295,6 +302,10 @@ func loadAppConfig(path string) (appConfig, bool, error) {
 	if err := decoder.Decode(&config); err != nil {
 		return config, false, fmt.Errorf("parse config %q: %w", path, err)
 	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		return config, false, fmt.Errorf("config %q must contain exactly one YAML document", path)
+	}
 	if err := validateAppConfig(config); err != nil {
 		return config, false, fmt.Errorf("config %q: %w", path, err)
 	}
@@ -302,6 +313,9 @@ func loadAppConfig(path string) (appConfig, bool, error) {
 }
 
 func validateAppConfig(config appConfig) error {
+	if err := validatePluginConfig(config.Plugins); err != nil {
+		return err
+	}
 	if err := validateAuditConfig(config.Audit); err != nil {
 		return err
 	}

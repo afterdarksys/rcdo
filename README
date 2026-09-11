@@ -36,6 +36,11 @@ before using live workplace adapters. These features do not require AI credentia
 
 ## Current foundation
 
+RCDO supports optional executable plugins. Register them in configuration, then
+enable plugin support globally and enable each plugin individually. Run
+`rcdo plugin list` to inspect their effective state. See
+[writing and configuring plugins](docs/plugins.md) for the protocol and working example.
+
 The Go package in `finding/` gives every future checker one output contract:
 
 - Validated findings with stable IDs, severity, resource, action, environment, evidence, confidence, and remediation.

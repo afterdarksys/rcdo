@@ -11,6 +11,12 @@ with both Terraform and OpenTofu passed. See the
 
 ## Next implementation and acceptance work
 
+- [x] Add opt-in executable plugins with global/per-plugin configuration switches,
+  metadata-only listing, bounded execution, validated reports, documentation and
+  an executable authoring example. Keep plugin provenance separate from built-ins.
+- [ ] Add a concrete shell2see wrapper for selected finite report-producing commands
+  using the new plugin protocol; interactive commands need explicit adaptations.
+
 - [x] Add an explicit nonproduction runner that records producer state lineage/
   serial, output-to-inventory conversion, resolved inputs, callback events and
   independent outcome observations. Add a portable exporter and runnable local

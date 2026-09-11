@@ -39,6 +39,9 @@ jobs:
       - name: Exercise portable workflow collection
         run: python3 scripts/workflow-integration-practice.py --binary dist/rcdo
 
+      - name: Exercise executable plugins and config switches
+        run: python3 scripts/plugin-practice.py
+
       - name: Check accessible help output
         shell: bash
         run: |
