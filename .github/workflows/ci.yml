@@ -42,6 +42,9 @@ jobs:
       - name: Exercise executable plugins and config switches
         run: python3 scripts/plugin-practice.py
 
+      - name: Exercise like-service mappings and four-cloud comparison
+        run: python3 scripts/service-compare-practice.py --binary dist/rcdo
+
       - name: Check accessible help output
         shell: bash
         run: |

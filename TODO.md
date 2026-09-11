@@ -11,6 +11,17 @@ with both Terraform and OpenTofu passed. See the
 
 ## Next implementation and acceptance work
 
+- [x] Add editable like-service catalogs and pairwise deployment comparison for
+  two through sixteen clouds/deployments, with typed field contracts, explicit
+  units, freshness, coverage, redaction and source/catalog provenance. Include
+  object/block storage mappings and credential-free four-cloud practice.
+- [ ] Add provider-specific exporters into the normalized service-comparison
+  schema, validating effective settings and units against real redacted fixtures.
+  Raw Terraform/provider data must not imply unsupported control equivalence.
+- [ ] Extend reviewed mappings beyond storage using workload-specific contracts
+  for compute, databases, networking and queues; validate linear comparison
+  reports with the operator's assistive technology.
+
 - [x] Add native Google Cloud project/account checks, bounded Compute Engine
   fleet and attachment collection, and explicit create-command previews for
   networks, subnets, buckets and service accounts. Include credential-free

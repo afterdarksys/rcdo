@@ -44,6 +44,8 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"service-map":         flagSet("format", "width"),
+	"service-compare":     flagSet("format", "width", "environment", "max-age", "maps"),
 	"plugin":              flagSet("format", "width", "environment"),
 	"workflow-collect":    flagSet("format", "width"),
 	"workflow-trace":      flagSet("format", "width", "environment"),

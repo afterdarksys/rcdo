@@ -10,6 +10,12 @@ The intended community includes blind and low-vision DevOps engineers using scre
 
 ## Accessible operations project
 
+[Like-service mappings and deployment comparison](docs/service-comparison.md)
+let you define comparable cloud services and compare two through sixteen
+normalized deployments. Built-in storage mappings cover AWS, Azure, Google Cloud
+and Oracle Cloud, with object and block storage kept separate. Reports identify
+matching settings, differences, missing roles and incomplete evidence per pair.
+
 Native [Google Cloud support](docs/google-cloud.md) adds project/account checks,
 read-only Compute Engine fleet and attachment collection, and command previews
 for networks, subnets, buckets and service accounts. Inventory is scoped to one

@@ -18,6 +18,7 @@ func prepareReportProvenance(name string, args []string, o *commonOptions) error
 		return fmt.Errorf("provenance requires --change-id, full --commit and environment")
 	}
 	fileFlags := map[string]bool{"input": true, "before": true, "after": true, "expect": true, "limits": true, "policy": true, "rego": true, "repo-policy": true, "expect-config": true, "manifest": true, "plan": true, "baseline": true, "suite": true, "config": true}
+	fileFlags["maps"] = true
 	// Commands whose main evidence comes from live state cannot substitute an
 	// unrelated --input file for the observation. Their collector must bind it.
 	unsupported := map[string]bool{"review": true, "git-review": true, "network-check": true, "doctor": true, "collect": true, "workflow-collect": true}
