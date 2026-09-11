@@ -11,6 +11,7 @@ import (
 )
 
 var pilotTasks = map[string][]string{
+	"workflow":      {"confirm-nonproduction-identity", "trace-output-consumer", "identify-override", "detect-stale-output", "detect-wrong-host", "explain-stop-condition", "resume-interrupted-review", "verify-run-outcome"},
 	"accessibility": {"identify-risk", "log-bookmark", "monitor-pause", "permission-scope", "context-mismatch", "identity-bookmark", "resume-task", "audit-output"},
 	"integration":   {"docker-context", "iac-backend", "ansible-inventory", "spacelift-run", "network-endpoint"},
 }
@@ -39,7 +40,7 @@ func runPilot(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("pilot "+mode, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	path := fs.String("state", ".rcdo-pilot.json", "operator acceptance session")
-	suite := fs.String("suite", "accessibility", "accessibility or integration")
+	suite := fs.String("suite", "accessibility", "accessibility, integration, or workflow")
 	operator := fs.String("operator", "", "actual operator name for start")
 	setup := fs.String("setup", "", "actual OS, terminal, assistive technology/CLI versions and nonproduction scope")
 	task := fs.String("task", "", "task ID to record")

@@ -457,6 +457,16 @@ python3 scripts/workflow-practice.py
 ```
 
 See [workflow contracts and local native practice](docs/terraform-ansible-workflow.md).
+
+`workflow-trace` follows variables into tasks, local roles and templates.
+`workflow-collect` acquires bound evidence from GitHub Actions or explicit
+Spacelift/custom exports and runs the same staged review. The workplace recorder
+captures actual producer, Ansible and independent health evidence. `pilot --suite
+workflow` retains the operator's accessibility acceptance observations.
+
+See [workplace setup, adapters and acceptance](docs/workplace-workflow.md).
+Run `python3 scripts/workflow-integration-practice.py` for portable collection
+practice, or add `--native --engine terraform` (or `tofu`) for a localhost run.
 The guide also covers stricter `deploy-review` validation and the provenance and
 source bindings now required by `review-change`.
 

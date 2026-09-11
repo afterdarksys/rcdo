@@ -199,6 +199,10 @@ func buildStateTree(data []byte) (map[string]*stateWalkNode, []string, error) {
 	return nodes, gaps, nil
 }
 func runStateWalk(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 1 && oneOf(args[0], "--help", "-help", "-h") {
+		fmt.Fprintln(stderr, "State commands: start, show, child, parent, next, previous, goto, find, bookmark.")
+		args = append([]string{"show"}, args...)
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("state-walk requires start, show, child, parent, next, previous, goto, find or bookmark")
 	}

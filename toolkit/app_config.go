@@ -43,6 +43,8 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"workflow-collect":    flagSet("format", "width"),
+	"workflow-trace":      flagSet("format", "width", "environment"),
 	"workflow-check":      flagSet("format", "width", "max-age"),
 	"policy-review":       flagSet("format", "width", "environment", "timeout", "query"),
 	"rego-diff":           flagSet("format", "width", "environment", "timeout", "query"),

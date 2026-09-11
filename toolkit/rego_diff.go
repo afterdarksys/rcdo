@@ -143,5 +143,5 @@ func runRegoDiff(args []string, stdout, stderr io.Writer) error {
 		f.Evidence = append(f.Evidence, policyDelta(a, b)...)
 		report.Findings = append(report.Findings, f)
 	}
-	return emitReport(stdout, o.format, o.width, report)
+	return emitReportOptions(stdout, o, report)
 }

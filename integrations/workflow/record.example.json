@@ -1,0 +1,29 @@
+{
+  "nonproduction": true,
+  "identity": {
+    "change_id": "REPLACE-CHANGE",
+    "commit": "REPLACE-WITH-FULL-DEPLOYED-COMMIT",
+    "environment": "staging",
+    "engine": "terraform",
+    "backend": "REPLACE-WITH-EXACT-BACKEND-AND-KEY",
+    "workspace": "staging",
+    "account": "REPLACE-ACCOUNT",
+    "region": "REPLACE-REGION"
+  },
+  "origin": {"provider": "custom", "project": "REPLACE-PROJECT", "run_id": "REPLACE-RUN", "attempt": 1},
+  "project_root": "../..",
+  "terraform_dir": "../../infrastructure",
+  "playbook": "../../ansible/site.yml",
+  "identity_command": ["/absolute/path/to/kit", "observed-workflow-identity"],
+  "producer_command": ["terraform", "apply", "-input=false", "approved.tfplan"],
+  "inventory_command": ["/absolute/path/to/kit", "inventory-from-terraform-stdin"],
+  "verify_command": ["/absolute/path/to/kit", "verify-staging-json"],
+  "hosts": ["blue"],
+  "variable_sources_complete": false,
+  "mappings": [
+    {"id": "blue-address", "output": "web_address", "pointer": "", "host": "blue", "variable": "ansible_host", "type": "string"},
+    {"id": "database", "output": "database_endpoint", "pointer": "", "host": "blue", "variable": "db_host", "type": "string"}
+  ],
+  "required_checks": [{"host": "blue", "name": "application-health"}],
+  "timeout_seconds": 1200
+}

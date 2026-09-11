@@ -47,6 +47,7 @@ func runIACValidate(args []string, stdin io.Reader, stdout, stderr io.Writer) er
 		}
 	}
 	r := finding.Report{CompletedChecks: []string{"Native validation result review; remote state and services are not validated"}, Findings: []finding.Finding{}}
+	bindReportSource(&r, o, "iac-validate", data)
 	var v struct {
 		FormatVersion string `json:"format_version"`
 		Valid         *bool  `json:"valid"`

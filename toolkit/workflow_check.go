@@ -37,6 +37,8 @@ type workflowMapping struct {
 	Type     string `json:"type"`
 }
 type workflowManifest struct {
+	Origin          *workflowOrigin             `json:"origin,omitempty"`
+	SourceGraph     *boundArtifact              `json:"source_graph,omitempty"`
 	SchemaVersion   string                      `json:"schema_version"`
 	Identity        workflowIdentity            `json:"identity"`
 	Outputs         boundArtifact               `json:"outputs"`
@@ -510,6 +512,29 @@ func runWorkflowCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) 
 		reviewWorkflowExecution(&r, m, stage, age, collected, effective, load)
 	} else {
 		r.CompletedChecks = append(r.CompletedChecks, "Inputs stage only: selected hosts are the declared limit; no Ansible execution or remote health claim")
+	}
+	if m.SourceGraph != nil {
+		var graph workflowSourceGraph
+		if workflowJSON(load("Consumer source graph", *m.SourceGraph), &graph) != nil || graph.SchemaVersion != "1" || graph.Root.SHA256 != m.Playbook.SHA256 || len(graph.Files) > 128 {
+			r.IncompleteChecks = append(r.IncompleteChecks, "Consumer graph is invalid or belongs to another playbook")
+		} else {
+			for _, source := range graph.Files {
+				load("Consumer source", source)
+			}
+			r.IncompleteChecks = append(r.IncompleteChecks, graph.Gaps...)
+			for _, mapping := range m.Mappings {
+				found := false
+				for _, use := range graph.Uses {
+					if use.Variable == mapping.Variable && oneOf(use.Kind, "task", "template") && use.Line > 0 {
+						found = true
+						r.CompletedChecks = append(r.CompletedChecks, "Consumer for mapping "+mapping.ID+": "+safeReportText(use.File)+":"+fmt.Sprint(use.Line)+"; task "+auditText(use.Task)+"; via "+safeReportText(strings.Join(use.Via, " -> ")))
+					}
+				}
+				if !found && mapping.Variable != "ansible_host" {
+					r.IncompleteChecks = append(r.IncompleteChecks, "Mapping "+mapping.ID+" has no resolved task/template consumer")
+				}
+			}
+		}
 	}
 	r.IncompleteChecks = uniqueStrings(r.IncompleteChecks)
 	return emitReportOptions(stdout, o, r)

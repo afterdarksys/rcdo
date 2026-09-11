@@ -1,0 +1,22 @@
+# Insert after your authorized deployment has produced evidence/workflow.json.
+# Bind that manifest's identity.commit to the actual deployed commit.
+# Upload private evidence only to a repository whose readers may access its values.
+- name: Package workflow evidence
+  env:
+    RCDO_PROJECT: ${{ github.repository }}
+    RCDO_RUN: ${{ github.run_id }}
+    RCDO_ATTEMPT: ${{ github.run_attempt }}
+  run: >-
+    python3 integrations/workflow/export.py
+    --manifest evidence/workflow.json --output-dir workflow-export
+    --provider github --project "$RCDO_PROJECT"
+    --run "$RCDO_RUN" --attempt "$RCDO_ATTEMPT" --stage verified
+- name: Upload workflow evidence
+  id: rcdo_evidence
+  uses: actions/upload-artifact@v7
+  with:
+    name: rcdo-workflow-${{ github.run_id }}-${{ github.run_attempt }}
+    path: workflow-export/bundle/
+    if-no-files-found: error
+    retention-days: 7
+    overwrite: false

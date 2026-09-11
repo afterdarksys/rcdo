@@ -119,6 +119,10 @@ func verifyRunbookStep(raw []byte, b executableRunbook, s runbookState, index in
 	return r, nil
 }
 func runRunbookWalk(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 1 && oneOf(args[0], "--help", "-help", "-h") {
+		fmt.Fprintln(stderr, "Runbook commands: start, show, read, attempt, complete, verify, next, back, handoff.")
+		args = append([]string{"show"}, args...)
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("runbook requires start, show, read, attempt, complete, verify, next, back or handoff")
 	}

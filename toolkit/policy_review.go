@@ -93,5 +93,5 @@ func runPolicyReview(args []string, stdin io.Reader, stdout, stderr io.Writer) e
 		}
 		merge("rego", r)
 	}
-	return emitReport(stdout, o.format, o.width, report)
+	return emitReportOptions(stdout, o, report)
 }

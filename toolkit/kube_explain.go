@@ -362,6 +362,14 @@ func runKubeExplain(args []string, stdin io.Reader, stdout, stderr io.Writer) er
 			return e
 		}
 		r.CompletedChecks = append(r.CompletedChecks, "Normalized snapshot saved; SHA-256: "+digestBytes(append(data, '\n')))
+		o.input = save
+		bindReportSource(&r, o, "kube-explain", append(data, '\n'))
+	} else if native {
+		data, e := json.Marshal(s)
+		if e != nil {
+			return e
+		}
+		bindReportSource(&r, o, "kube-explain", data)
 	}
 	return emitReportOptions(stdout, o, r)
 }

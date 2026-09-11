@@ -116,7 +116,7 @@ func runRego(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	}
 	incomplete := func(message string) error {
 		report.IncompleteChecks = append(report.IncompleteChecks, message)
-		return emitReport(stdout, options.format, options.width, report)
+		return emitReportOptions(stdout, options, report)
 	}
 	opa, err := exec.LookPath("opa")
 	if err != nil {
@@ -183,7 +183,7 @@ func runRego(args []string, stdin io.Reader, stdout, stderr io.Writer) error {
 	report.Findings = decisionReport.Findings
 	report.IncompleteChecks = decisionReport.IncompleteChecks
 	report.CompletedChecks = append(report.CompletedChecks, "Evaluated "+query+" with restricted local builtins")
-	return emitReport(stdout, options.format, options.width, report)
+	return emitReportOptions(stdout, options, report)
 }
 
 func regoDecision(raw []byte, environment string) (finding.Report, error) {

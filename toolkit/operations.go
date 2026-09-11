@@ -32,6 +32,13 @@ func runImportantCheck(args []string, stdin io.Reader, stdout, stderr io.Writer)
 		return fmt.Errorf("read config %q: %w", configPath, err)
 	}
 	patterns := parsePatterns(string(config))
+	if options.provenance != nil {
+		path, e := filepath.Abs(configPath)
+		if e != nil {
+			return e
+		}
+		options.provenance.Artifacts = append(options.provenance.Artifacts, finding.ProvenanceArtifact{Path: path, SHA256: digestBytes(config)})
+	}
 	if len(patterns) == 0 {
 		return fmt.Errorf("config %q contains no path patterns", configPath)
 	}

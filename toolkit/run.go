@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"workflow-collect", "workflow-trace",
 	"workflow-check",
 	"policy-review", "rego-diff", "rego-test", "rego-check",
 	"pilot",
@@ -88,6 +89,10 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "workflow-collect":
+		err = runWorkflowCollect(args, stdin, stdout, stderr)
+	case "workflow-trace":
+		err = runWorkflowTrace(args, stdin, stdout, stderr)
 	case "workflow-check":
 		err = runWorkflowCheck(args, stdin, stdout, stderr)
 	case "policy-review":
@@ -271,6 +276,8 @@ func statusExitCode(status finding.Status) int {
 }
 
 type commonOptions struct {
+	provenance  *finding.Provenance
+	bindingGaps []string
 	changeID    string
 	commit      string
 	input       string
@@ -289,6 +296,9 @@ func addCommonFlags(fs *flag.FlagSet, options *commonOptions) {
 }
 
 func addProvenanceFlags(fs *flag.FlagSet, options *commonOptions) {
+	if fs.Lookup("change-id") != nil {
+		return
+	}
 	fs.StringVar(&options.changeID, "change-id", "", "explicit change identifier; requires --commit")
 	fs.StringVar(&options.commit, "commit", "", "full Git commit for this source; requires --change-id")
 }
@@ -329,6 +339,7 @@ func parseFlags(name string, args []string, stderr io.Writer, configure func(*fl
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	options := configure(fs)
+	addProvenanceFlags(fs, options)
 	setAccessibleUsage(fs, name, stderr)
 	if err := fs.Parse(args); err != nil {
 		return fs, *options, err
@@ -341,6 +352,9 @@ func parseFlags(name string, args []string, stderr io.Writer, configure func(*fl
 	}
 	if options.width < finding.MinTextWidth {
 		return fs, *options, fmt.Errorf("--width must be at least %d", finding.MinTextWidth)
+	}
+	if err := prepareReportProvenance(name, args, options); err != nil {
+		return fs, *options, err
 	}
 	return fs, *options, nil
 }
@@ -418,6 +432,27 @@ func emitReport(w io.Writer, format string, width int, report finding.Report) er
 }
 
 func emitReportOptions(w io.Writer, options commonOptions, report finding.Report) error {
+	if report.Provenance == nil && options.provenance != nil {
+		copy := *options.provenance
+		copy.Artifacts = nil
+		report.Provenance = &copy
+	}
+	if report.Provenance != nil && options.provenance != nil {
+		seen := map[finding.ProvenanceArtifact]bool{}
+		for _, a := range report.Provenance.Artifacts {
+			seen[a] = true
+		}
+		for _, a := range options.provenance.Artifacts {
+			if !seen[a] {
+				report.Provenance.Artifacts = append(report.Provenance.Artifacts, a)
+				seen[a] = true
+			}
+		}
+	}
+	if report.Provenance == nil && (options.changeID != "" || options.commit != "") {
+		report.IncompleteChecks = append(report.IncompleteChecks, "Requested provenance has no captured source; use a named snapshot input")
+	}
+	report.IncompleteChecks = append(report.IncompleteChecks, options.bindingGaps...)
 	if err := checkProvenanceArtifacts(report.Provenance); err != nil {
 		report.IncompleteChecks = append(report.IncompleteChecks, err.Error())
 	}

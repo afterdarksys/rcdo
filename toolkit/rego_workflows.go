@@ -217,5 +217,5 @@ func runRegoTest(args []string, stdout, stderr io.Writer) error {
 			report.Findings = append(report.Findings, makeFinding(fmt.Sprintf("rego-test.%d", i+1), finding.SeverityHigh, "Policy fixture failed", c.Name, "test", o.environment, reason, "Fixture input SHA-256: "+digestBytes(c.Input), "Review the policy change or correct the fixture expectation"))
 		}
 	}
-	return emitReport(stdout, o.format, o.width, report)
+	return emitReportOptions(stdout, o, report)
 }

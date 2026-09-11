@@ -33,6 +33,10 @@ type incidentState struct {
 }
 
 func runIncident(args []string, stdout, stderr io.Writer) error {
+	if len(args) == 1 && oneOf(args[0], "--help", "-help", "-h") {
+		fmt.Fprintln(stderr, "Incident commands: start, show, resume, note, hypothesis, resolve, evidence.\nMore commands: action, next-action, next, previous, handoff.")
+		args = append([]string{"show"}, args...)
+	}
 	if len(args) == 0 {
 		return fmt.Errorf("incident requires start, show, resume, note, hypothesis, resolve, evidence, action, next-action, next, previous or handoff")
 	}

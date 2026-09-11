@@ -31,6 +31,14 @@ jobs:
       - name: Build toolkit
         run: make build
 
+      - name: Check callback and workflow export contracts
+        run: |
+          python3 -m unittest discover -s integrations/ansible -p 'test_*.py'
+          python3 -m unittest discover -s integrations/workflow -p 'test_*.py'
+
+      - name: Exercise portable workflow collection
+        run: python3 scripts/workflow-integration-practice.py --binary dist/rcdo
+
       - name: Check accessible help output
         shell: bash
         run: |

@@ -14,6 +14,7 @@ func runReceiptReview(args []string, stdout, stderr io.Writer) error {
 	fs.SetOutput(stderr)
 	input := fs.String("input", "", "runreceipt JSON file")
 	width := fs.Int("width", 72, "text width")
+	setAccessibleUsage(fs, "receipt-review", stderr)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

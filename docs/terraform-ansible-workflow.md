@@ -139,10 +139,12 @@ precedence. Plays with additional variable sources, delegation, dynamic host
 selection, or unsupported execution controls remain incomplete. Mappings identify
 host-variable consumers, not arbitrary template expressions or every task use.
 
-The receipts are caller-supplied local evidence, not signatures or authenticated
-remote execution attestation. A workplace collector must acquire and bind the
-right backend/state version, invocation, and independent outcome checks. No
-GitHub Actions or Spacelift write/execute adapter is added by this command.
+The receipts are local evidence, not signatures or authenticated remote execution
+attestation. The [workplace recorder and collection adapters](workplace-workflow.md)
+acquire and bind state versions, invocation and independent checks. Collection
+does not execute infrastructure. The separate recorder executes only an explicitly
+authorized configuration. `workflow-trace` adds static task/role/template links;
+runtime precedence restrictions in `workflow-check` still apply.
 
 Source and dependent artifact hashes are retained in report provenance. A
 changed dependent artifact invalidates subsequent aggregation/session reading.
@@ -151,8 +153,9 @@ and bookmarks. Actual assistive-technology acceptance still requires the operato
 
 ## Change review provenance
 
-`ansible-check`, `tofu-check`, `pr-manager inspect`, and `cloud-context-check`
-accept paired `--change-id` and `--commit` flags. Reports retain environment,
+Common report commands accept paired `--change-id` and `--commit` flags.
+Named primary inputs and secondary policy/expectation files are bound and
+rechecked. Reports retain environment,
 tool, source digest, collection time, and source bindings even with zero findings.
 `workflow-check` derives these from its manifest.
 
@@ -203,4 +206,4 @@ identity must be verified. Neither command treats `{}` as completed evidence.
   inputs, required health checks, and dependency changes after saving a session.
 
 The native tests use temporary local state and localhost only. Authenticated
-workplace adapters and actual screen-reader/braille acceptance are not claimed.
+workplace validation and actual screen-reader/braille acceptance are not claimed.
