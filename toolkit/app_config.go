@@ -44,6 +44,8 @@ type credentialStore struct {
 }
 
 var configurableFlags = map[string]map[string]bool{
+	"shift":               flagSet("format", "width", "layout"),
+	"see":                 flagSet("format", "width"),
 	"service-map":         flagSet("format", "width"),
 	"service-compare":     flagSet("format", "width", "environment", "max-age", "maps"),
 	"plugin":              flagSet("format", "width", "environment"),

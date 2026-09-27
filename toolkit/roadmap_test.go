@@ -92,8 +92,12 @@ func TestReceiptReviewNeverHidesEarlyFailure(t *testing.T) {
 	}{{"completed", `[{"index":1,"state":"exited","exit_code":7},{"index":2,"state":"exited","exit_code":0}]`, 10}, {"running", `[{"index":1,"state":"not_started","exit_code":null}]`, 30}, {"completed", `[{"index":1,"state":"exited","exit_code":0}]`, 0}} {
 		os.WriteFile(p, []byte(fmt.Sprintf(`{"schema":"missing-utils/runreceipt/v1","scope":"local_process_only","state":%q,"stages":%s}`, tc.state, tc.stages)), 0600)
 		c, o, e := execute("receipt-review", []string{"--input", p}, "")
-		if c != tc.code || !strings.Contains(o, "Outcome verified: no") {
+		if c != tc.code || !strings.Contains(o, "Outcome verified: no") || !strings.Contains(o, "A later local success does not make the deployment successful.") {
 			t.Fatal(c, o, e)
+		}
+		failed := strings.Contains(tc.stages, `"exit_code":7`)
+		if failed != strings.Contains(o, "Earlier stage failure remains.") {
+			t.Fatal(o)
 		}
 	}
 }

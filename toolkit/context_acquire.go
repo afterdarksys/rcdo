@@ -251,7 +251,7 @@ func acquireSpaceContext(c *contextAcquirer, stack, run, expectedEndpoint string
 func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	fs := flag.NewFlagSet("context-acquire", flag.ContinueOnError)
 	fs.SetOutput(stderr)
-	kind := fs.String("kind", "", "docker, tofu, terraform, ansible, spacelift or gcp")
+	kind := fs.String("kind", "", "docker, tofu, terraform, ansible, spacelift, gcp or azure")
 	project := fs.String("project", "", "expected GCP project ID")
 	principal := fs.String("expect-account", "", "expected GCP account email")
 	zone := fs.String("zone", "", "optional explicit GCP zone")
@@ -266,16 +266,21 @@ func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	stack := fs.String("stack", "", "Spacelift stack ID")
 	run := fs.String("run", "", "Spacelift run ID")
 	endpoint := fs.String("expect-endpoint", "", "exact expected spacectl endpoint")
+	subscription := fs.String("subscription", "", "explicit Azure subscription GUID")
+	tenant := fs.String("expect-tenant", "", "explicit Azure tenant GUID")
 	setAccessibleUsage(fs, "context-acquire", stderr)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if fs.NArg() != 0 || !*native || !oneOf(*kind, "docker", "tofu", "terraform", "ansible", "spacelift", "gcp") || !operationLabel(*name) {
+	if fs.NArg() != 0 || !*native || !oneOf(*kind, "docker", "tofu", "terraform", "ansible", "spacelift", "gcp", "azure") || !operationLabel(*name) {
 		return fmt.Errorf("requires --native, --name and supported --kind")
 	}
 	complete := true
 	if *kind != "gcp" && (*project != "" || *principal != "" || *zone != "" || *configuration != "") {
 		return fmt.Errorf("GCP selectors require --kind gcp")
+	}
+	if *kind != "azure" && (*subscription != "" || *tenant != "") {
+		return fmt.Errorf("Azure selectors require --kind azure")
 	}
 	bundle := contextBundle{SchemaVersion: "1", Complete: &complete, Contexts: map[string]contextObservation{}}
 	if *merge != "" {
@@ -297,6 +302,8 @@ func runContextAcquire(args []string, stdout, stderr io.Writer) error {
 	switch *kind {
 	case "gcp":
 		values, err = acquireGCP(c, gcpSelectors{Project: *project, Principal: *principal, Zone: *zone, Configuration: *configuration})
+	case "azure":
+		values, err = acquireAzure(c, *subscription, *tenant)
 	case "docker":
 		values, err = acquireDocker(c, *docker)
 	case "tofu", "terraform":

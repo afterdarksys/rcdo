@@ -24,6 +24,10 @@ compatibility. Use nonproduction data and record actual observations below.
 8. Attempt runbook advancement after completion without verification; explain the block.
 9. Read the failed health check, then the passing synthetic verification artifact.
 10. Read the stale plan review and explain why the old review cannot establish current safety.
+11. `shift-brief`: run `rcdo shift --layout speech` on a nonproduction report set. Repeat the blocker, the uncertainty, and the next command without looking at a second tool.
+12. `pipeline-stage-failure`: read a receipt where an early stage failed and a later stage exited 0. Say why that is not a successful deploy.
+13. `change-ticket`: read `rcdo shift --format ticket` and decide whether the paragraph can go into the change ticket without a sighted translation.
+14. `image-or-pdf`: run `rcdo see` on a console screenshot or a one-page PDF. Confirm it does not claim to describe the picture.
 
 For each task record completion, elapsed time if useful, navigation obstacles,
 missed or ambiguous information, assistance required and a concrete improvement.

@@ -8,6 +8,19 @@ The intended community includes blind and low-vision DevOps engineers using scre
 
 > Status: work-ready beta core. Every documented command builds and runs, with live read-only collectors for installed CLIs. Each employer must validate its credentials, schemas, policies, and deployment-kit adapter before production use. The checks are conservative guardrails, not proof that a deployment is safe.
 
+## Start of a shift
+
+`rcdo shift` is the short reading of reports you already have. It says who the reports claim you are, the one highest-severity blocker, the first thing that was not proven, and one next command. Speech and 40-column braille layouts are built in. A stack of reports with no identity line is incomplete. A later success does not make the change safe.
+
+```sh
+rcdo context --input snapshot.json --expect work.yaml --format json > context.json
+rcdo tofu-check --input plan.json --format json > plan.json.report
+rcdo shift --report context.json --report plan.json.report --layout speech --change-id CHG-42
+rcdo shift --report context.json --report plan.json.report --format ticket --change-id CHG-42
+```
+
+`--format ticket` is a paragraph for the change ticket. It is not approval to deploy. `rcdo receipt-review` says when an earlier stage failed, and it always says that a later local success does not make the deployment successful. `rcdo see` reads image metadata and bounded PDF text from `imgsee` and `pdfsee`. It does not describe what a picture shows. Details are in [the shift guide](docs/shift.md).
+
 ## Accessible operations project
 
 [Like-service mappings and deployment comparison](docs/service-comparison.md)

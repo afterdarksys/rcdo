@@ -22,6 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
+	"shift", "see",
 	"service-map", "service-compare",
 	"plugin",
 	"workflow-collect", "workflow-trace",
@@ -91,6 +92,10 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		observe(args)
 	}
 	switch command {
+	case "shift":
+		err = runShift(args, stdout, stderr)
+	case "see":
+		err = runSee(args, stdout, stderr)
 	case "service-map":
 		err = runServiceMap(args, stdin, stdout, stderr)
 	case "service-compare":

@@ -43,6 +43,8 @@ func runReceiptReview(args []string, stdout, stderr io.Writer) error {
 	if r.State != "completed" {
 		status = finding.StatusIncomplete
 	}
+	failed, unknown := 0, 0
+	seenFailure := false
 	for i, s := range r.Stages {
 		if s.Index != i+1 {
 			return fmt.Errorf("invalid stage ordering")
@@ -50,14 +52,24 @@ func runReceiptReview(args []string, stdout, stderr io.Writer) error {
 		result := "completion unknown"
 		if s.State == "exited" && s.ExitCode != nil && *s.ExitCode >= 0 {
 			result = fmt.Sprintf("local exit %d", *s.ExitCode)
-			if *s.ExitCode != 0 && status == finding.StatusClean {
-				status = finding.StatusReview
+			if *s.ExitCode != 0 {
+				failed++
+				seenFailure = true
+				if status == finding.StatusClean {
+					status = finding.StatusReview
+				}
 			}
 		} else {
+			unknown++
 			status = finding.StatusIncomplete
 		}
 		fmt.Fprintf(&out, "Stage %d: %s; %s\n", s.Index, s.Executable, result)
 	}
+	fmt.Fprintf(&out, "Stage result: %d stages. Failed local exits: %d. Unknown completions: %d.\n", len(r.Stages), failed, unknown)
+	if seenFailure {
+		fmt.Fprintln(&out, "Earlier stage failure remains.")
+	}
+	fmt.Fprintln(&out, "A later local success does not make the deployment successful.")
 	fmt.Fprintln(&out, "Outcome verified: no. Check the target independently before retrying.\nThis receipt records local processes, not remote deployment success.")
 	sessionText(stdout, out.String(), *width)
 	if status != finding.StatusClean {

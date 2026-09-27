@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/netip"
 	"sort"
+	"strings"
 )
 
 func permissionStatements(raw []byte) (map[string]map[string]any, error) {
@@ -137,6 +138,37 @@ func permissionStringSet(value any) ([]string, error) {
 	sort.Strings(out)
 	return out, nil
 }
+
+// permissionPlainAccess is a reading of one Allow statement. It is not an
+// effective-access decision from a cloud provider.
+func permissionPlainAccess(statement map[string]any) string {
+	actions, _ := statement["Action"].([]string)
+	resources, _ := statement["Resource"].([]string)
+	broad, passRole := false, false
+	for _, action := range actions {
+		if action == "*" || strings.HasSuffix(action, ":*") {
+			broad = true
+		}
+		lower := strings.ToLower(action)
+		if lower == "iam:passrole" || lower == "sts:assumerole" {
+			passRole = true
+		}
+	}
+	for _, resource := range resources {
+		if resource == "*" {
+			broad = true
+		}
+	}
+	sentences := []string{}
+	if broad {
+		sentences = append(sentences, "Plain access: this Allow names every action or every resource. It does not prove the identity can use that access.")
+	}
+	if passRole {
+		sentences = append(sentences, "Plain access: this Allow can pass a role or assume another identity. Read the resource names before approval.")
+	}
+	return strings.Join(sentences, " ")
+}
+
 func explainPermissionDelta(r *finding.Report, before, after []byte, resource, env string) error {
 	b, err := permissionStatements(before)
 	if err != nil {
@@ -175,6 +207,11 @@ func explainPermissionDelta(r *finding.Report, before, after []byte, resource, e
 				severity = finding.SeverityHigh
 			}
 			scope := "Statement scope: " + auditText(key) + ". Other policies and runtime conditions determine effective access."
+			if side.added && effect == "Allow" {
+				if sentence := permissionPlainAccess(s); sentence != "" {
+					scope += " " + sentence
+				}
+			}
 			addIAC(r, "PERMISSION", severity, title, resource, "compare", env, scope)
 			if s["Condition"] != nil || s["NotAction"] != nil || s["NotResource"] != nil || s["NotPrincipal"] != nil {
 				r.IncompleteChecks = append(r.IncompleteChecks, "Conditional or complemented scope changed; effective access cannot be established from these documents")

@@ -58,12 +58,22 @@ func runContext(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 	if decoder.Decode(&want) != nil || decoder.Decode(new(any)) != io.EOF {
 		return fmt.Errorf("expectations must contain one valid context document")
 	}
-	if want.SchemaVersion != "1" || (want.Cloud != "aws" && want.Cloud != "alicloud") {
-		return fmt.Errorf("context requires schema_version 1 and cloud aws or alicloud")
+	if want.SchemaVersion != "1" || !oneOf(want.Cloud, "aws", "alicloud", "azure", "gcp") {
+		return fmt.Errorf("context requires schema_version 1 and cloud aws, alicloud, azure, or gcp")
 	}
 	for _, s := range []string{want.Name, want.Environment, want.Profile, want.Region, want.Account} {
 		if !operationLabel(s) {
 			return fmt.Errorf("context name, environment, profile, region and account are required single-line values")
+		}
+	}
+	switch want.Cloud {
+	case "azure":
+		if !azureGUID.MatchString(want.Account) {
+			return fmt.Errorf("Azure expectations require the account field to be a subscription GUID")
+		}
+	case "gcp":
+		if !gcpProjectPattern.MatchString(want.Account) {
+			return fmt.Errorf("GCP expectations require the account field to be a project ID")
 		}
 	}
 	if want.Principal != "" && !operationLabel(want.Principal) {
@@ -109,6 +119,19 @@ func runContext(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 	if got.CollectedAt.IsZero() || time.Since(got.CollectedAt) > maxAge || time.Until(got.CollectedAt) > time.Minute {
 		report.IncompleteChecks = append(report.IncompleteChecks, "identity evidence is stale or its observation time is invalid")
 	}
+	accountWord := "account"
+	switch want.Cloud {
+	case "azure":
+		accountWord = "subscription"
+		if !azureGUID.MatchString(got.Account) {
+			report.IncompleteChecks = append(report.IncompleteChecks, "Azure subscription identity is not a GUID")
+		}
+	case "gcp":
+		accountWord = "project"
+		if !gcpProjectPattern.MatchString(got.Account) {
+			report.IncompleteChecks = append(report.IncompleteChecks, "GCP project identity is not a project ID")
+		}
+	}
 	fields := [][3]string{{"cloud", want.Cloud, got.Cloud}, {"profile", want.Profile, got.Profile}, {"region", want.Region, got.Region}, {"account", want.Account, got.Account}}
 	if want.Principal != "" {
 		fields = append(fields, [3]string{"principal", want.Principal, got.Principal})
@@ -118,7 +141,11 @@ func runContext(args []string, stdin io.Reader, stdout, stderr io.Writer) error 
 			report.Findings = append(report.Findings, makeFinding("CONTEXT-"+strings.ToUpper(field[0]), finding.SeverityCritical, "Work context does not match intended "+field[0], want.Name, "verify target", want.Environment, "The collected value differs from the named context.", "expected: "+field[1]+"; observed: "+field[2], "Select the intended context and recollect identity before continuing."))
 		}
 	}
-	report.CompletedChecks = append(report.CompletedChecks, "context: "+want.Name+"; environment: "+want.Environment, "cloud: "+got.Cloud+"; account: "+got.Account, "principal: "+got.Principal, "profile: "+got.Profile, "region selected for collector: "+got.Region+"; STS does not establish resource location", "observation time: "+got.CollectedAt.UTC().Format(time.RFC3339), fmt.Sprintf("snapshot SHA-256: %x", sha256.Sum256(raw)), fmt.Sprintf("expectations SHA-256: %x", sha256.Sum256(data)))
+	regionNote := "region selected for collector: " + got.Region + "; STS does not establish resource location"
+	if want.Cloud == "azure" || want.Cloud == "gcp" {
+		regionNote = "region selected for collector: " + got.Region + "; this label does not establish where resources run"
+	}
+	report.CompletedChecks = append(report.CompletedChecks, "context: "+want.Name+"; environment: "+want.Environment, "cloud: "+got.Cloud+"; account: "+got.Account, "identity label: cloud "+got.Cloud+"; "+accountWord+" "+got.Account+"; principal "+got.Principal, "principal: "+got.Principal, "profile: "+got.Profile, regionNote, "observation time: "+got.CollectedAt.UTC().Format(time.RFC3339), fmt.Sprintf("snapshot SHA-256: %x", sha256.Sum256(raw)), fmt.Sprintf("expectations SHA-256: %x", sha256.Sum256(data)))
 	if got.Source == "provided" {
 		report.CompletedChecks = append(report.CompletedChecks, "source: supplied snapshot and timestamp; live identity was not verified by this invocation")
 	} else {

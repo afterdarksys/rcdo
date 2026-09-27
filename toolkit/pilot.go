@@ -12,7 +12,7 @@ import (
 
 var pilotTasks = map[string][]string{
 	"workflow":      {"confirm-nonproduction-identity", "trace-output-consumer", "identify-override", "detect-stale-output", "detect-wrong-host", "explain-stop-condition", "resume-interrupted-review", "verify-run-outcome"},
-	"accessibility": {"identify-risk", "log-bookmark", "monitor-pause", "permission-scope", "context-mismatch", "identity-bookmark", "resume-task", "audit-output"},
+	"accessibility": {"identify-risk", "log-bookmark", "monitor-pause", "permission-scope", "context-mismatch", "identity-bookmark", "resume-task", "audit-output", "shift-brief", "pipeline-stage-failure", "change-ticket", "image-or-pdf"},
 	"integration":   {"docker-context", "iac-backend", "ansible-inventory", "spacelift-run", "network-endpoint"},
 }
 
