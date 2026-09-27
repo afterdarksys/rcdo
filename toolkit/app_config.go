@@ -46,6 +46,7 @@ type credentialStore struct {
 var configurableFlags = map[string]map[string]bool{
 	"shift":               flagSet("format", "width", "layout"),
 	"see":                 flagSet("format", "width"),
+	"prebuild":            flagSet("format", "width", "environment", "color"),
 	"ansible-scope":       flagSet("format", "width", "environment"),
 	"permission-check":    flagSet("format", "width", "environment"),
 	"service-export":      flagSet("format", "width", "environment"),

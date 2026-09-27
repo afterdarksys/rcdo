@@ -64,6 +64,27 @@ here is not effective access.
 An earlier denial remains a blocker when the current decision passed. A snapshot
 without history says that history was not supplied; it does not invent events.
 
+`rcdo prebuild --plan plan.json --playbook site.yml` reads a saved
+`terraform show -json` or `tofu show -json` plan and a playbook. It prints
+create, update, delete, replace, and task lines for both. Nothing is applied.
+An Ansible `state: absent` is a delete. A template or copy without a literal
+absent state is `ensure`: the file was not compared with the host, so create
+and update are not distinguished. Roles are not expanded.
+
+```sh
+rcdo prebuild --plan plan.json --playbook site.yml --color=never
+rcdo prebuild --plan plan.json --playbook site.yml --color=always --color-flag vm=cyan --color-flag action-delete=bright-red
+```
+
+`--color=auto` adds color on a terminal unless `NO_COLOR` is set or `TERM` is
+`dumb`. `--color=always` colors even a pipe. `--color=never` is plain text.
+Classes are `vm`, `container`, `route`, `filter`, `lb`, `logs`, `fs`, `dir`,
+`proc`, `devops`, and `conn`. Action colors use `action-create`,
+`action-update`, `action-delete`, `action-replace`, `action-ensure`, and
+`action-task`. The word and the `[class]` label are always present. Colors are
+named, not raw terminal codes. `--color_flag` is the same option as
+`--color-flag`.
+
 Record a real assistive-technology pass with `rcdo pilot` tasks `shift-brief`,
 `pipeline-stage-failure`, `change-ticket`, and `image-or-pdf`. Automated tests
 do not establish screen-reader, braille, or magnification acceptance.

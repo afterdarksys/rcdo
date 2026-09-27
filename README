@@ -21,7 +21,9 @@ rcdo shift --report context.json --report plan.json.report --format ticket --cha
 
 `--format ticket` is a paragraph for the change ticket. It is not approval to deploy. `rcdo receipt-review` says when an earlier stage failed, and it always says that a later local success does not make the deployment successful. `rcdo see` reads image metadata and bounded PDF text from `imgsee` and `pdfsee`. It does not describe what a picture shows.
 
-`rcdo ansible-scope` reads a playbook limit and the play's remote user. `rcdo permission-check` matches one action against one policy document and fails closed on conditions. `rcdo service-export` turns a redacted storage observation into a comparison record. `rcdo spacelift-check` keeps an earlier policy denial when a later decision passed. Shared VPC references are kept, and the host project is named as not inventoried. Details and the friend-test steps are in [the shift guide](docs/shift.md).
+`rcdo ansible-scope` reads a playbook limit and the play's remote user. `rcdo permission-check` matches one action against one policy document and fails closed on conditions. `rcdo service-export` turns a redacted storage observation into a comparison record. `rcdo spacelift-check` keeps an earlier policy denial when a later decision passed. Shared VPC references are kept, and the host project is named as not inventoried.
+
+`rcdo prebuild --plan plan.json --playbook site.yml` lists what the saved Terraform or OpenTofu plan would create, change, or delete, and what the playbook would ask Ansible to do. It does not apply either one. `--color=auto` colors a terminal only. `--color=never` leaves the same words with no color. `--color-flag vm=cyan` retunes a class. The class name stays in the text, so color is not the only signal. Details and the friend-test steps are in [the shift guide](docs/shift.md).
 
 ## Accessible operations project
 
