@@ -127,6 +127,16 @@ effective public access from one isolated policy flag. Omit a field or use null
 when its meaning cannot be established; that produces an incomplete comparison.
 Never substitute zero or false for unknown evidence.
 
+## Export a redacted observation
+
+`rcdo service-export` maps one narrow observation into one deployment object.
+It does not call a cloud. Supported inputs are `aws/s3`, `azure/blob-storage`,
+`gcp/cloud-storage`, `aws/ebs`, `azure/managed-disks`, and `gcp/persistent-disk`.
+The input schema is `rcdo/service-export/v1`. A missing control is omitted and
+the deployment is incomplete. `size_bytes` becomes `size_gib` only when it is a
+positive whole number of gibibytes. GCP `size_gb` is decimal gigabytes and is
+not converted. JSON output with incomplete coverage exits 30.
+
 Set `complete` to true only for an explicitly covered scope of logical roles.
 An empty `resources` array is valid evidence of absence in that declared scope;
 an omitted array is invalid. Missing or false `complete` prevents absence from

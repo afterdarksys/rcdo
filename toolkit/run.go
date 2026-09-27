@@ -22,7 +22,7 @@ import (
 const Version = "rcdo 1.3.0-beta.1"
 
 var commandNames = []string{
-	"shift", "see",
+	"shift", "see", "ansible-scope", "permission-check", "service-export",
 	"service-map", "service-compare",
 	"plugin",
 	"workflow-collect", "workflow-trace",
@@ -96,6 +96,12 @@ func runCommandObserved(command string, args []string, stdin io.Reader, stdout, 
 		err = runShift(args, stdout, stderr)
 	case "see":
 		err = runSee(args, stdout, stderr)
+	case "ansible-scope":
+		err = runAnsibleScope(args, stdout, stderr)
+	case "permission-check":
+		err = runPermissionCheck(args, stdout, stderr)
+	case "service-export":
+		err = runServiceExport(args, stdin, stdout, stderr)
 	case "service-map":
 		err = runServiceMap(args, stdin, stdout, stderr)
 	case "service-compare":

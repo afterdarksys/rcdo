@@ -50,6 +50,20 @@ for a bounded PDF extract of 40 non-empty lines. Text inside images is not
 read. A missing tool, terminal controls, or a truncated extract is incomplete.
 Use `markdown-view` and `to-markdown` for text documents.
 
+`rcdo ansible-scope --playbook site.yml --inventory inventory.json` expands a
+literal host or group from `ansible-inventory --list` JSON. It ignores host
+vars. A templated limit, a role, or a task-level user stays incomplete. The
+effective remote user beyond the play text is always unproven.
+
+`rcdo permission-check --document policy.json --action s3:GetObject --resource arn:aws:s3:::bucket/key`
+matches one action and one resource in one document. An explicit Deny wins.
+A condition or a complement on a matching statement is incomplete. An Allow
+here is not effective access.
+
+`rcdo spacelift-check` speaks each supplied policy history event in time order.
+An earlier denial remains a blocker when the current decision passed. A snapshot
+without history says that history was not supplied; it does not invent events.
+
 Record a real assistive-technology pass with `rcdo pilot` tasks `shift-brief`,
 `pipeline-stage-failure`, `change-ticket`, and `image-or-pdf`. Automated tests
 do not establish screen-reader, braille, or magnification acceptance.

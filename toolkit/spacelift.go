@@ -12,10 +12,15 @@ import (
 	"time"
 )
 
-type spacePolicy struct {
-	ID       string `json:"id"`
-	Type     string `json:"type"`
+type spacePolicyEvent struct {
+	At       string `json:"at"`
 	Decision string `json:"decision"`
+}
+type spacePolicy struct {
+	ID       string             `json:"id"`
+	Type     string             `json:"type"`
+	Decision string             `json:"decision"`
+	History  []spacePolicyEvent `json:"history,omitempty"`
 }
 type spaceApproval struct {
 	Satisfied   *bool    `json:"satisfied"`
@@ -237,6 +242,7 @@ func reviewSpace(s spaceSnapshot, x spaceOptions, env string, now time.Time) fin
 			default:
 				r.IncompleteChecks = append(r.IncompleteChecks, "Policy decision unknown: "+p.ID)
 			}
+			reviewPolicyHistory(&r, p, s.RunID, env)
 		}
 	}
 	if s.Approval == nil || s.Approval.Satisfied == nil {
@@ -247,6 +253,39 @@ func reviewSpace(s spaceSnapshot, x spaceOptions, env string, now time.Time) fin
 	reviewSpaceOperations(&r, s, x, env, now)
 	r.CompletedChecks = append(r.CompletedChecks, "Run: "+s.RunID+"; stack: "+s.StackID+"; type: "+s.RunType+"; state: "+s.State+"; source: "+s.Source)
 	return r
+}
+func spaceDecisionDenied(decision string) bool {
+	return oneOf(strings.ToLower(decision), "deny", "denied", "reject", "rejected", "fail", "failed")
+}
+func reviewPolicyHistory(r *finding.Report, p spacePolicy, runID, env string) {
+	if len(p.History) == 0 {
+		r.CompletedChecks = append(r.CompletedChecks, "Policy "+p.ID+": current decision only. Decision history was not supplied.")
+		return
+	}
+	if len(p.History) > 32 {
+		r.IncompleteChecks = append(r.IncompleteChecks, "Policy "+p.ID+": decision history exceeds 32 events")
+		return
+	}
+	var previous time.Time
+	earlierDeny := false
+	for i, event := range p.History {
+		at, err := time.Parse(time.RFC3339Nano, event.At)
+		if err != nil || !operationLabel(event.Decision) || (!previous.IsZero() && !at.After(previous)) {
+			r.IncompleteChecks = append(r.IncompleteChecks, "Policy "+p.ID+": decision history is unordered or incomplete")
+			return
+		}
+		previous = at
+		if spaceDecisionDenied(event.Decision) && i < len(p.History)-1 {
+			earlierDeny = true
+		}
+		r.CompletedChecks = append(r.CompletedChecks, fmt.Sprintf("Policy %s history %d: %s at %s", p.ID, i+1, event.Decision, event.At))
+	}
+	if !strings.EqualFold(p.History[len(p.History)-1].Decision, p.Decision) {
+		r.IncompleteChecks = append(r.IncompleteChecks, "Policy "+p.ID+": latest history decision does not match the current decision")
+	}
+	if earlierDeny && !spaceDecisionDenied(p.Decision) {
+		addIAC(r, "SPACE-POLICY-HISTORY", finding.SeverityHigh, "An earlier policy decision denied this run", runID, "policy", env, "Policy: "+p.ID+"; current decision: "+p.Decision+"; an earlier denial remains in the history")
+	}
 }
 func reviewSpaceOperations(r *finding.Report, s spaceSnapshot, x spaceOptions, env string, now time.Time) {
 	if s.Dependencies == nil {

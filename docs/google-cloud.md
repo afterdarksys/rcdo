@@ -54,9 +54,12 @@ or over-limit inventory produces incomplete evidence and exit 30.
 Relationships describe instances and their network/subnet attachment references.
 They do not independently inventory the referenced networks or subnets. IDs use
 canonical `projects/PROJECT/...` paths. In the shared graph schema, `account`
-contains the project ID and `region` contains the selected observation zone,
-including for network/subnet references. Shared VPC and legacy network
-attachments are currently unsupported and make collection incomplete.
+on an instance is the service project. On a Shared VPC network or subnet
+reference, `account` is the host project named in the path. `region` remains
+the selected observation zone. A Shared VPC reference is kept, and the source
+says the host project was not inventoried. `complete` does not mean the host
+project was scanned. A legacy network with no subnet is still unsupported and
+makes collection incomplete.
 VM metadata, SSH keys and IP addresses are not exported.
 
 Fleet collection uses the existing version 1 fleet manifest with
@@ -93,8 +96,9 @@ reports `executed: false`. Bucket previews enable uniform bucket-level access
 and public access prevention. Service-account previews create no keys or role
 grants. Provider naming, availability and organization policies still apply.
 
-Google Cloud HCL decomposition, IAM policy inventory, Cloud SQL, Cloud Run, GKE,
-Shared VPC and cross-project collection are not implemented in this release.
+Google Cloud HCL decomposition, IAM policy inventory, Cloud SQL, Cloud Run, and
+GKE are not implemented in this release. Shared VPC attachments are recorded as
+references only; the host project is not collected.
 The existing Terraform-to-Ansible workflow checks remain provider-neutral;
 Google Cloud support does not bypass their evidence requirements.
 

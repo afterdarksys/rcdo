@@ -200,6 +200,27 @@ func gcpResourcePath(raw string) (string, error) {
 	}
 	return raw, nil
 }
+
+// classifyGCPAttachment accepts a subnet in the instance region. A network
+// project other than the instance project is a Shared VPC reference. The host
+// project is not inventoried. Legacy networks without a subnet stay unsupported.
+func classifyGCPAttachment(networkRaw, subnetRaw, zone string) (network, subnet, host string, err error) {
+	network, err = gcpResourcePath(networkRaw)
+	if err != nil {
+		return "", "", "", err
+	}
+	subnet, err = gcpResourcePath(subnetRaw)
+	if err != nil {
+		return "", "", "", err
+	}
+	netParts := strings.Split(network, "/")
+	subParts := strings.Split(subnet, "/")
+	region := zone[:strings.LastIndex(zone, "-")]
+	if len(netParts) != 5 || netParts[2] != "global" || netParts[3] != "networks" || len(subParts) != 6 || subParts[2] != "regions" || subParts[3] != region || subParts[4] != "subnetworks" || netParts[1] != subParts[1] || !gcpProjectPattern.MatchString(netParts[1]) {
+		return "", "", "", fmt.Errorf("unsupported attachment")
+	}
+	return network, subnet, netParts[1], nil
+}
 func collectGCPInstances(c *contextAcquirer, s gcpSelectors, limit int) ([]gcpInstance, []string) {
 	raw, e := c.call("gcloud", gcpArgs(s, true, "compute", "instances", "list", "--zones="+s.Zone, "--limit="+strconv.Itoa(limit+1), "--page-size=100")...)
 	if e != nil {
@@ -228,10 +249,9 @@ func collectGCPInstances(c *contextAcquirer, s gcpSelectors, limit int) ([]gcpIn
 		v.MachineType = machine
 		for j := range v.Interfaces {
 			n := &v.Interfaces[j]
-			network, ne := gcpResourcePath(n.Network)
-			subnet, se := gcpResourcePath(n.Subnet)
-			if ne != nil || se != nil || len(strings.Split(network, "/")) != 5 || len(strings.Split(subnet, "/")) != 6 || !strings.HasPrefix(network, "projects/"+s.Project+"/global/networks/") || !strings.HasPrefix(subnet, "projects/"+s.Project+"/regions/"+s.Zone[:strings.LastIndex(s.Zone, "-")]+"/subnetworks/") {
-				return nil, []string{"GCP network/subnet attachment is missing, outside scope, or unsupported (including Shared VPC and legacy networks)"}
+			network, subnet, _, err := classifyGCPAttachment(n.Network, n.Subnet, s.Zone)
+			if err != nil {
+				return nil, []string{"GCP network/subnet attachment is missing, outside scope, or unsupported (including legacy networks without a subnet)"}
 			}
 			n.Network = network
 			n.Subnet = subnet
@@ -290,6 +310,23 @@ func runGCPCollect(kind string, s gcpSelectors, limit int, manifest, output stri
 	complete := len(gaps) == 0
 	stamp := time.Now().UTC().Format(time.RFC3339Nano)
 	source := "gcloud read-only observation; project " + s.Project + "; zone " + s.Zone + "; instance control-plane metadata only, not guest health"
+	sharedHosts := map[string]bool{}
+	for _, v := range items {
+		for _, n := range v.Interfaces {
+			_, _, host, err := classifyGCPAttachment(n.Network, n.Subnet, s.Zone)
+			if err == nil && host != s.Project {
+				sharedHosts[host] = true
+			}
+		}
+	}
+	if len(sharedHosts) > 0 {
+		names := make([]string, 0, len(sharedHosts))
+		for host := range sharedHosts {
+			names = append(names, host)
+		}
+		sort.Strings(names)
+		source += "; Shared VPC host projects " + strings.Join(names, ", ") + " were not inventoried"
+	}
 	var artifact any
 	switch kind {
 	case "context":
@@ -325,18 +362,26 @@ func runGCPCollect(kind string, s gcpSelectors, limit int, manifest, output stri
 		g := relationGraph{SchemaVersion: "1", Complete: &complete, CollectedAt: stamp, Source: source + "; network/subnet references are not independently described", Nodes: []relationNode{}, Edges: []relationEdge{}, Scopes: []relationScope{{Account: s.Project, Region: s.Zone, Complete: &complete, Outcome: "pass"}}}
 		nodes := map[string]relationNode{}
 		edges := map[string]bool{}
-		add := func(id, kind string) {
-			nodes[id] = relationNode{ID: id, Type: kind, Account: s.Project, Region: s.Zone}
+		add := func(id, kind, account string) {
+			nodes[id] = relationNode{ID: id, Type: kind, Account: account, Region: s.Zone}
 		}
 		for _, v := range items {
 			id := v.Zone + "/instances/" + v.Name
-			add(id, "gcp-compute-instance")
+			add(id, "gcp-compute-instance", s.Project)
 			for _, n := range v.Interfaces {
+				_, _, host, _ := classifyGCPAttachment(n.Network, n.Subnet, s.Zone)
+				if host == "" {
+					host = s.Project
+				}
+				edgeSource := "Compute instance networkInterfaces"
+				if host != s.Project {
+					edgeSource += "; Shared VPC host project " + host + "; host network was not inventoried"
+				}
 				for ref, kind := range map[string]string{n.Network: "gcp-network-reference", n.Subnet: "gcp-subnet-reference"} {
-					add(ref, kind)
+					add(ref, kind, host)
 					key := id + "/" + ref
 					if !edges[key] {
-						g.Edges = append(g.Edges, relationEdge{From: id, To: ref, Kind: "observed", Source: "Compute instance networkInterfaces"})
+						g.Edges = append(g.Edges, relationEdge{From: id, To: ref, Kind: "observed", Source: edgeSource})
 						edges[key] = true
 					}
 				}
