@@ -684,3 +684,10 @@ structured decisions, CI exit codes, restricted builtins, and plan checks.
 Policy workflow batch: rego-test runs fixture suites, rego-diff compares policy
 versions, and policy-review combines IaC and Rego results. Five starter safeguards
 and complete usage are in docs/policy-workflows.md.
+
+## License
+
+rcdo is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later version.
+See [LICENSE](LICENSE) (SPDX: GPL-3.0-or-later).
