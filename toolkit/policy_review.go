@@ -6,7 +6,7 @@ import (
 	"io"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func runPolicyReview(args []string, stdin io.Reader, stdout, stderr io.Writer) error {

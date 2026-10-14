@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func hasAction(actions []string, target string) bool {

@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // shiftBrief is the spoken front door for one change window. It reads reports

@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 const Version = "rcdo 1.3.0-beta.1"

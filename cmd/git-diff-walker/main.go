@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"git-tools/diffwalk"
+	"github.com/afterdarksys/rcdo/diffwalk"
 )
 
 const version = "git-diff-walker 0.1.0"

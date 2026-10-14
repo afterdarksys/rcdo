@@ -2,7 +2,7 @@ package toolkit
 
 import (
 	"encoding/json"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"os"
 	"path/filepath"
 	"strings"

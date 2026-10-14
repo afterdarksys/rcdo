@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func serviceFixture() serviceDeploymentBundle {

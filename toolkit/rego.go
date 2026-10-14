@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // Deliberately allow only pure builtins, including on newer OPA releases.

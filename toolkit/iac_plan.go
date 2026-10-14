@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 type iacChange struct {

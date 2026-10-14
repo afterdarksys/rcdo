@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 type stateWalkNode struct {

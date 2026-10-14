@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"io"
 	"os"
 	"os/signal"

@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"git-tools/toolkit"
+	"github.com/afterdarksys/rcdo/toolkit"
 )
 
 func main() {

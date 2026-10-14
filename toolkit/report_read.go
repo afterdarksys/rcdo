@@ -9,7 +9,7 @@ import (
 	"strings"
 	"unicode"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // speakIdentifier describes case and punctuation without normalizing the identifier.

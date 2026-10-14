@@ -6,7 +6,7 @@ import (
 	"io"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // Threats: a blind operator can approve an Allow that does not mean what it

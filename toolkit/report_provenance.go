@@ -2,7 +2,7 @@ package toolkit
 
 import (
 	"fmt"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"strings"
 	"time"
 )

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 var doctorLookPath = exec.LookPath

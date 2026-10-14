@@ -8,7 +8,7 @@ import (
 	"io"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // service-export maps a narrow, already-redacted provider observation into one

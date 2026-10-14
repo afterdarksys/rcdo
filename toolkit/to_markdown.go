@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 const documentLimit = 32 << 20

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	ctyjson "github.com/zclconf/go-cty/cty/json"
 	"gopkg.in/yaml.v3"
 )

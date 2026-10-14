@@ -16,7 +16,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 type pluginConfig struct {

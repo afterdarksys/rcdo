@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"gopkg.in/yaml.v3"
 )
 

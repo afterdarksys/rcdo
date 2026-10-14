@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/diffwalk"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/diffwalk"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func runImportantCheck(args []string, stdin io.Reader, stdout, stderr io.Writer) error {

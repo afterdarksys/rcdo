@@ -3,7 +3,7 @@ package toolkit
 import (
 	"bytes"
 	"encoding/json"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"os"
 	"path/filepath"
 	"strings"

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 type reviewAcknowledgement struct {

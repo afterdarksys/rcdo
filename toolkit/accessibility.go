@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func runReviewBrief(args []string, stdin io.Reader, stdout, stderr io.Writer) error {

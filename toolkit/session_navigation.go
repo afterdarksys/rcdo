@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"io"
 	"sort"
 	"strings"

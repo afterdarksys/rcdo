@@ -1,4 +1,4 @@
-module git-tools
+module github.com/afterdarksys/rcdo
 
 go 1.24.0
 

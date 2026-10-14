@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func TestRegoDecision(t *testing.T) {

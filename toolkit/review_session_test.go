@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func sessionFixture(t *testing.T, report finding.Report) (string, string) {

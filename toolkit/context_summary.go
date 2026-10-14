@@ -3,7 +3,7 @@ package toolkit
 import (
 	"flag"
 	"fmt"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"io"
 	"reflect"
 	"strings"

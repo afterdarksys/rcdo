@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"git-tools/diffwalk"
+	"github.com/afterdarksys/rcdo/diffwalk"
 )
 
 func runDiffWalk(args []string, stdin io.Reader, stdout, stderr io.Writer) error {

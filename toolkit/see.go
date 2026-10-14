@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // Threats: pictures and PDFs in a change ticket are easy to skip when the

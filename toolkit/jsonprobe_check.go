@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // The adapter consumes the aggregate JSON document, never a stream whose end

@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 var awsAccountID = regexp.MustCompile(`^[0-9]{12}$`)

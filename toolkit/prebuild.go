@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // prebuild reads a saved Terraform or OpenTofu plan and an Ansible playbook.

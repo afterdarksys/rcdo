@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 var networkLookup = net.DefaultResolver.LookupIPAddr

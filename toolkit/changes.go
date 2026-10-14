@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 func reportChanges(before, after finding.Report) finding.Report {

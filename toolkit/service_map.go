@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sort"
 
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 )
 
 // A family asserts comparable purpose and explicit normalized field semantics,

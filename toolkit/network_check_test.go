@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"net"
 	"net/http"
 	"net/http/httptest"

@@ -2,7 +2,7 @@ package toolkit
 
 import (
 	"bytes"
-	"git-tools/finding"
+	"github.com/afterdarksys/rcdo/finding"
 	"strings"
 	"testing"
 )
